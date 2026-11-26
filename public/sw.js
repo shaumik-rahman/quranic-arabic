@@ -1,9 +1,8 @@
-/* Quranic Arabic service worker: offline app shell + cached Quran data and audio. */
-const VERSION = "qa-v1";
+/* Quranic Arabic service worker: offline app shell + cached Quran data. */
+const VERSION = "qa-v2";
 const SHELL = `${VERSION}-shell`;
 const STATIC = `${VERSION}-static`;
 const DATA = `${VERSION}-data`;
-const AUDIO = "qa-audio"; // kept across versions
 
 const PRECACHE = ["/learn", "/review", "/quran", "/library", "/profile", "/icon-192.png", "/icon-512.png", "/manifest.webmanifest"];
 
@@ -14,7 +13,7 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => !k.startsWith(VERSION) && k !== AUDIO).map((k) => caches.delete(k))),
+      Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k))),
     ).then(() => self.clients.claim()),
   );
 });
@@ -38,12 +37,9 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
 
-  // Quran audio (word + verse): cache forever
-  if (/qurancdn\.com|everyayah\.com/.test(url.hostname)) {
-    e.respondWith(cacheFirst(req, AUDIO).catch(() => fetch(req)));
-    return;
-  }
-  if (url.origin !== self.location.origin) return; // Supabase etc. go straight to network
+  // Audio and other sites (quran.com, everyayah, Supabase) go straight to the network:
+  // Safari can't play audio that a service worker hands back.
+  if (url.origin !== self.location.origin) return;
 
   if (url.pathname.startsWith("/_next/static/") || /\.(png|svg|woff2?|ttf|ico)$/.test(url.pathname)) {
     e.respondWith(cacheFirst(req, STATIC));

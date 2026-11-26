@@ -80,6 +80,18 @@ export default function ProfilePage() {
           </div>
         </div>
         <div>
+          <span className={`text-sm font-bold text-muted ${bn}`}>{lang === "bn" ? "কুরআনের লিপি" : "Quran script"}</span>
+          <div className="mt-1 grid grid-cols-2 gap-2">
+            {([["indopak", "IndoPak", "بِسْمِ اللّٰهِ"], ["uthmani", "Uthmani", "بِسۡمِ ٱللَّهِ"]] as const).map(([v, label, sample]) => (
+              <button key={v} onClick={() => p.setSettings({ script: v })} data-script-option={v}
+                className={`rounded-xl border-2 py-1.5 font-extrabold ${(p.settings.script ?? "indopak") === v ? "border-emerald bg-emerald-light text-emerald-dark" : "border-line bg-white"}`}>
+                <span className="block text-sm">{label}</span>
+                <span className="block text-xl leading-tight" style={{ fontFamily: v === "indopak" ? '"IndoPak Nastaleeq"' : '"Amiri Quran"' }} dir="rtl">{sample}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
           <span className={`text-sm font-bold text-muted ${bn}`}>{t("daily")}</span>
           <div className="mt-1 grid grid-cols-4 gap-2">
             {[10, 20, 30, 50].map((g) => (
@@ -111,7 +123,7 @@ export default function ProfilePage() {
 
       <section className="px-1 pb-4 text-xs leading-relaxed text-muted">
         <b>Sources.</b> Quran text &amp; translations (Saheeh International, Muhiuddin Khan): tanzil.net. Word-by-word meanings &amp; word audio: quran.com.
-        Roots &amp; word forms: Quranic Arabic Corpus (corpus.quran.com). Recitation: Mishary Alafasy (everyayah.com).
+        Roots &amp; word forms: Quranic Arabic Corpus (corpus.quran.com). Recitation: Mishary Alafasy (everyayah.com). IndoPak text &amp; “AlQuran IndoPak” font by Ayman Siddiqui (QuranWBW / Quran.com).
         Bangla word meanings and related words were written for this app — please report anything that needs correcting.
       </section>
     </div>

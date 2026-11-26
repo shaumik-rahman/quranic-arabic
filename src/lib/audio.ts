@@ -5,17 +5,61 @@ import { useProgress } from "./store";
 let el: HTMLAudioElement | null = null;
 let queue: string[] = [];
 let ctx: AudioContext | null = null;
+let unlocked = false;
+let pending: string[] | null = null; // a play that the browser blocked before the first tap
+
+// A tiny silent WAV (50 ms), played on the first tap to "unlock" audio on iPhone/Safari.
+const SILENT = "data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
 
 function player() {
   if (!el && typeof window !== "undefined") {
     el = new Audio();
     el.preload = "auto";
+    el.setAttribute("playsinline", "");
     el.addEventListener("ended", () => {
       const next = queue.shift();
-      if (next && el) { el.src = next; el.play().catch(() => {}); }
+      if (next) start(next);
+    });
+    el.addEventListener("error", () => {
+      console.warn("[audio] could not load", el?.src);
+      const next = queue.shift();
+      if (next) start(next);
     });
   }
   return el;
+}
+
+function start(url: string) {
+  const p = player();
+  if (!p) return;
+  p.src = url;
+  const pr = p.play();
+  if (pr) pr.catch((err: DOMException) => {
+    if (err?.name === "NotAllowedError") pending = [url, ...queue]; // retry on the next tap
+    else console.warn("[audio]", err?.name, err?.message);
+  });
+}
+
+/** Call once: unlocks audio on the first tap anywhere, and plays anything the browser blocked. */
+export function initAudioUnlock() {
+  if (typeof window === "undefined" || unlocked) return;
+  const unlock = () => {
+    if (unlocked) return;
+    unlocked = true;
+    try {
+      ctx = ctx || new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      ctx.resume().catch(() => {});
+    } catch {}
+    const p = player();
+    if (p && !pending && p.paused) {
+      p.src = SILENT;
+      p.play().catch(() => {});
+    }
+    if (pending) { const urls = pending; pending = null; playUrls(urls); }
+  };
+  window.addEventListener("pointerdown", unlock, { capture: true, passive: true });
+  window.addEventListener("touchend", unlock, { capture: true, passive: true });
+  window.addEventListener("keydown", unlock, { capture: true });
 }
 
 export function playUrls(urls: string[]) {
@@ -23,21 +67,20 @@ export function playUrls(urls: string[]) {
   if (!p || !urls.length) return;
   queue = urls.slice(1);
   p.pause();
-  p.src = urls[0];
-  p.currentTime = 0;
-  p.play().catch(() => {});
+  start(urls[0]);
 }
 export const playWord = (id: string | null | undefined) => id && playUrls([wordAudioUrl(id)]);
 export const playVerse = (id: string) => playUrls([verseAudioUrl(id)]);
 export const playWordSequence = (ids: (string | null)[]) =>
   playUrls(ids.filter((x): x is string => !!x).map(wordAudioUrl));
-export function stopAudio() { queue = []; el?.pause(); }
+export function stopAudio() { queue = []; pending = null; el?.pause(); }
 
 /** Tiny synthesized feedback sounds (no files needed). */
 export function sfx(kind: "correct" | "wrong" | "complete") {
   if (typeof window === "undefined" || !useProgress.getState().settings.sound) return;
   try {
     ctx = ctx || new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
     const notes = kind === "correct" ? [660, 880] : kind === "wrong" ? [220, 180] : [523, 659, 784, 1046];
     notes.forEach((f, i) => {
       const o = ctx!.createOscillator();
@@ -54,3 +97,22 @@ export function sfx(kind: "correct" | "wrong" | "complete") {
     });
   } catch {}
 }
+
+/** Everyday (non-Quran) sentences have no recitation audio: use the device's Arabic voice if it has one. */
+export function speak(text: string, fallbackWordIds: (string | null)[] = []) {
+  if (typeof window === "undefined") return;
+  const synth = window.speechSynthesis;
+  const voice = synth?.getVoices().find((v) => v.lang.toLowerCase().startsWith("ar"));
+  if (!synth || !voice) { playWordSequence(fallbackWordIds); return; }
+  stopAudio();
+  synth.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/[ۖ-ۭ]/g, ""));
+  u.voice = voice;
+  u.lang = voice.lang;
+  u.rate = 0.8;
+  synth.speak(u);
+}
+export const playLine = (line: { kind: string; verseAudio: string | null; ar: string; tokens: { audio: string | null }[] }) =>
+  line.verseAudio ? playVerse(line.verseAudio)
+    : line.kind === "everyday" ? speak(line.ar, line.tokens.map((t) => t.audio))
+    : playWordSequence(line.tokens.map((t) => t.audio));

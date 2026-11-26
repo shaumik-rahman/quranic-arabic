@@ -1,4 +1,5 @@
 "use client";
+import { useScript } from "@/lib/script";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -11,7 +12,7 @@ import { useWordSheet } from "@/components/WordSheet";
 import { Ring } from "@/components/ui";
 
 type Lemma = [key: string, ar: string, root: string, count: number];
-type SurahData = { n: number; verses: { v: number; en: string; bn: string; w: [string, string, string, number][] }[] };
+type SurahData = { n: number; verses: { v: number; en: string; bn: string; w: [string, string, string, number, string?][] }[] };
 
 let lemmaCache: Lemma[] | null = null;
 async function getLemmas() {
@@ -25,11 +26,17 @@ export default function SurahReader() {
   const meta = coverage.surahs[num - 1];
   const { lang } = useT();
   const open = useWordSheet();
+  const { script } = useScript();
   const items = useProgress((s) => s.items);
   const translit = useProgress((s) => s.settings.translit);
   const [data, setData] = useState<SurahData | null>(null);
   const [lemmas, setLemmas] = useState<Lemma[] | null>(null);
   const [showTr, setShowTr] = useState(true);
+  useEffect(() => {
+    if (data && typeof window !== "undefined" && window.location.hash) {
+      setTimeout(() => document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+    }
+  }, [data]);
 
   useEffect(() => {
     setData(null);
@@ -74,14 +81,14 @@ export default function SurahReader() {
         <button onClick={() => setShowTr(!showTr)} className="btn btn-ghost py-2.5 text-sm">{showTr ? (lang === "bn" ? "অনুবাদ লুকান" : "Hide translation") : (lang === "bn" ? "অনুবাদ দেখান" : "Show translation")}</button>
       </div>
 
-      {num !== 1 && num !== 9 && <div className="ar mt-6 text-center text-3xl text-emerald">بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ</div>}
+      {num !== 1 && num !== 9 && <div className="ar mt-6 text-center text-3xl text-emerald">{script === "indopak" ? "بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِیْمِ" : "بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ"}</div>}
 
       {!data || !lemmas ? (
         <div className="mt-10 flex justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-line border-t-emerald" /></div>
       ) : (
         <div className="mt-4 space-y-3">
           {data.verses.map((v) => (
-            <div key={v.v} className="card p-4">
+            <div key={v.v} id={`v${v.v}`} className="card scroll-mt-20 p-4">
               <div className="flex items-start gap-2">
                 <button onClick={() => playUrls([verseAudioUrl(pad(num) + pad(v.v))])} className="mt-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sand text-xs font-black text-muted">{v.v}</button>
                 <div dir="rtl" className="flex flex-1 flex-wrap gap-x-1.5 gap-y-1">
@@ -91,9 +98,9 @@ export default function SurahReader() {
                     const loc = `${pad(num)}_${pad(v.v)}_${pad(i + 1)}`;
                     return (
                       <button key={i}
-                        onClick={() => open({ ar: w[0], en: w[1], bn: undefined, tr: w[2], key: WORDS[key] ? key : undefined, audio: loc, lemma: { ar: lar, root, count } })}
+                        onClick={() => open({ ar: w[0], ip: w[4] || null, en: w[1], bn: undefined, tr: w[2], key: WORDS[key] ? key : undefined, audio: loc, lemma: { ar: lar, root, count } })}
                         className={`rounded-lg px-1 transition ${known ? "bg-emerald-light text-emerald-dark" : "hover:bg-gold-light"}`}>
-                        <span className="ar block text-[28px]">{w[0]}</span>
+                        <span className="ar block text-[28px]">{script === "indopak" && w[4] ? w[4] : w[0]}</span>
                         {translit && <span className="block text-[10px] italic text-muted" dir="ltr">{w[2]}</span>}
                       </button>
                     );

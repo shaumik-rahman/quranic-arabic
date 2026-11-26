@@ -3,23 +3,30 @@ import coverageJson from "@/data/coverage.json";
 
 export type Lang = "en" | "bn";
 
-export interface FamilyMember { key: string; ar: string; count: number; ex: string; gloss: string; ref: string; self: boolean }
+export interface FamilyMember { key: string; ar: string; count: number; ex: string; exIp?: string | null; gloss: string; ref: string; self: boolean }
 export interface Word {
   key: string; ar: string; en: string; bn: string; emoji: string;
   cog: { en?: string; bn?: string; hi?: string }; tip: string;
   lemma: string; root: string; rootSpaced: string; count: number; rank: number | null;
   audio: string | null; family: FamilyMember[];
 }
-export interface Token { ar: string; en: string; bn: string; key: string; pats: string[]; audio: string | null; tr: string; loc: string | null }
+export interface Token { ar: string; ip?: string | null; en: string; bn: string; key: string; pats: string[]; audio: string | null; tr: string; loc: string | null; known?: boolean }
 export interface Line {
-  id: string; ref: string; kind: "quran" | "hand"; verseAudio: string | null;
-  en: string; bn: string; tokens: Token[]; ar: string; note_en?: string; note_bn?: string;
+  id: string; ref: string; kind: "quran" | "hand" | "everyday"; verseAudio: string | null;
+  en: string; bn: string; tokens: Token[]; ar: string; note_en?: string; note_bn?: string; newVerse?: boolean;
+}
+export interface Structure {
+  id: string; en: string; bn: string; emoji: string;
+  shape: { ar: string; en: string; bn: string; role: string }[];
+  expl_en: string; expl_bn: string; quran: Line[]; everyday: Line[];
+  chunk: Line | null; chunkVerses?: Line[]; chunkCount?: number;
 }
 export interface Text { id: string; en: string; bn: string; ar: string; emoji: string; desc_en: string; desc_bn: string; lines: Line[] }
-export interface Lesson { id: string; type: "learn" | "final"; words: string[]; patterns: string[] }
+export interface Lesson { id: string; type: "learn" | "final" | "structure" | "verses"; words: string[]; patterns: string[]; structure?: string; part?: number; parts?: number }
 export interface Unit {
   id: string; text: string; en: string; bn: string; completes: string | null; emoji: string;
   lines: Line[]; lessons: Lesson[]; newWords: string[]; newPatterns: string[];
+  structures: Structure[]; newVerses: Line[];
 }
 export interface Pattern {
   id: string; ar: string; en: string; bn: string; emoji: string; expl_en: string; expl_bn: string;
@@ -55,13 +62,18 @@ UNITS.forEach((u) => u.newWords.forEach((k) => (WORD_UNIT[k] = u.id)));
 export const PATTERN_UNIT: Record<string, string> = {};
 UNITS.forEach((u) => u.newPatterns.forEach((p) => (PATTERN_UNIT[p] = u.id)));
 
-/** All curriculum lines (for finding a word in context). */
+/** All curriculum lines incl. everyday sentences (for finding a word in context, distractors). */
 export const ALL_LINES: Line[] = (() => {
   const seen = new Set<string>();
   const out: Line[] = [];
-  for (const u of UNITS) for (const l of u.lines) if (!seen.has(l.id)) { seen.add(l.id); out.push(l); }
+  for (const u of UNITS) {
+    for (const l of u.lines) if (!seen.has(l.id)) { seen.add(l.id); out.push(l); }
+    for (const s of u.structures || []) for (const l of s.everyday) if (!seen.has(l.id)) { seen.add(l.id); out.push(l); }
+  }
   return out;
 })();
+export const STRUCTURES: Record<string, Structure & { unitId: string }> = {};
+UNITS.forEach((u) => (u.structures || []).forEach((s) => (STRUCTURES[s.id] = { ...s, unitId: u.id })));
 
 export const meaning = (w: { en: string; bn: string }, lang: Lang) => (lang === "bn" && w.bn ? w.bn : w.en);
 

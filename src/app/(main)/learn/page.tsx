@@ -1,8 +1,10 @@
 "use client";
+import { useScript } from "@/lib/script";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { BookOpenCheck, Check, Crown, Lock, Star } from "lucide-react";
+import { BookOpen, BookOpenCheck, Check, Crown, Lock, Puzzle, Star } from "lucide-react";
+import { useReadableVerses } from "@/lib/readable";
 import { UNITS, WORDS, textById, meaning } from "@/lib/course";
 import { useProgress } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
@@ -24,7 +26,9 @@ export default function LearnPage() {
   const { isTeacher } = useAuth();
   const { t, lang } = useT();
   const router = useRouter();
+  const { A } = useScript();
   const cov = quranCoverage(p);
+  const readable = useReadableVerses();
   const current = currentLessonId(p);
   const currentRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState("");
@@ -54,6 +58,9 @@ export default function LearnPage() {
             <div className="text-sm text-white/80">
               <span className="font-black text-gold">{cov.wordsMastered}</span> {t("mastered")} · {fmtPct(cov.pctMastered)}%
             </div>
+            <Link href="/quran#readable" className={`mt-1 inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-sm font-bold ${lang === "bn" ? "bn" : ""}`}>
+              📖 <span className="font-black text-gold">{readable ? readable.count : "…"}</span> {t("versesYouUnderstand")}
+            </Link>
           </div>
         </div>
         {current && (
@@ -79,7 +86,7 @@ export default function LearnPage() {
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-extrabold uppercase tracking-wider text-white/80">{lang === "bn" ? `ইউনিট ${ui + 1}` : `Unit ${ui + 1}`}</div>
                     <div className={`truncate text-lg font-black ${lang === "bn" ? "bn" : ""}`}>{lang === "bn" ? u.bn : u.en}</div>
-                    <div className="ar truncate text-lg leading-tight text-white/90">{text.ar}</div>
+                    <div className="ar truncate text-lg leading-tight text-white/90">{A(text.ar)}</div>
                   </div>
                   <Link href={`/read/${u.text}`} className="flex flex-col items-center rounded-2xl bg-white/20 px-2.5 py-1.5 text-xs font-extrabold">
                     <BookOpenCheck size={20} />
@@ -89,7 +96,7 @@ export default function LearnPage() {
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {u.newWords.slice(0, 8).map((k) => (
                     <span key={k} className={`rounded-full px-2 py-0.5 text-xs font-bold ${p.items[k] ? "bg-white text-ink" : "bg-white/15 text-white/90"}`}>
-                      <span className="ar">{WORDS[k].ar.split(" / ")[0]}</span> {p.items[k] ? meaning(WORDS[k], lang).split(/[,;(]/)[0] : ""}
+                      <span className="ar">{A(WORDS[k].ar.split(" / ")[0])}</span> {p.items[k] ? meaning(WORDS[k], lang).split(/[,;(]/)[0] : ""}
                     </span>
                   ))}
                   {u.newWords.length > 8 && <span className="rounded-full bg-white/15 px-2 py-0.5 text-xs font-bold">+{u.newWords.length - 8}</span>}
@@ -102,6 +109,8 @@ export default function LearnPage() {
                   const unlocked = isLessonUnlocked(p, l.id, isTeacher);
                   const isCurrent = l.id === current;
                   const final = l.type === "final";
+                  const Icon = final ? Crown : l.type === "structure" ? Puzzle : l.type === "verses" ? BookOpen : Star;
+                  const label = l.type === "structure" ? t("makeSentences") : l.type === "verses" ? t("newVerses") : "";
                   const off = OFFSETS[(li + ui * 3) % OFFSETS.length];
                   return (
                     <div key={l.id} ref={isCurrent ? currentRef : undefined} style={{ transform: `translateX(${off}px)` }} className="relative">
@@ -118,8 +127,9 @@ export default function LearnPage() {
                         } ${isCurrent ? "ring-8 ring-white" : ""}`}
                         style={{ boxShadow: `0 6px 0 ${completed ? "var(--color-gold-dark)" : unlocked ? col.dark : "#cfc5ae"}` }}
                       >
-                        {final ? <Crown size={30} strokeWidth={2.5} /> : completed ? <Check size={32} strokeWidth={3.5} /> : unlocked ? <Star size={30} fill="currentColor" /> : <Lock size={26} />}
+                        {completed && !final && l.type === "learn" ? <Check size={32} strokeWidth={3.5} /> : unlocked || completed ? <Icon size={30} strokeWidth={2.5} fill={l.type === "learn" ? "currentColor" : "none"} /> : <Lock size={26} />}
                       </button>
+                      {label && <div className={`mt-2 text-center text-xs font-extrabold text-muted ${lang === "bn" ? "bn" : ""}`}>{label}</div>}
                     </div>
                   );
                 })}

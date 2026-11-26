@@ -1,4 +1,5 @@
 "use client";
+import { useScript } from "@/lib/script";
 import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -11,6 +12,7 @@ const N_WORDS = Object.keys(WORDS).length;
 export default function Landing() {
   const { status } = useAuth();
   const router = useRouter();
+  const { A } = useScript();
   useEffect(() => { if (status === "signedIn") router.replace("/learn"); }, [status, router]);
 
   return (
@@ -21,7 +23,7 @@ export default function Landing() {
           <img src="/icon-192.png" alt="" className="mx-auto h-24 w-24 rounded-3xl shadow-lg" />
           <h1 className="mt-6 text-4xl font-black leading-tight">Understand the Quran you already recite</h1>
           <p className="bn mt-3 text-lg text-white/85">যে কুরআন আপনি পড়েন, এবার তা বুঝুন</p>
-          <div className="ar mt-8 text-4xl leading-relaxed text-gold">ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ</div>
+          <div className="ar mt-8 text-4xl leading-relaxed text-gold">{A("ٱلۡحَمۡدُ")} {A("لِلَّهِ")} {A("رَبِّ")} {A("ٱلۡعَٰلَمِينَ").split(" ")[0]}</div>
           <div className="mt-1 text-white/80">All praise is for Allah, Lord of the worlds</div>
           <div className="mt-8 grid grid-cols-3 gap-2 text-center">
             <Feature emoji="🧩" text="5-minute lessons" />

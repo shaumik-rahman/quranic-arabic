@@ -1,4 +1,4 @@
-import { ALL_LINES, PATTERNS, UNITS, WORDS, WORD_ORDER, linesWithWord, lessonById, unitById, type Line, type Token } from "./course";
+import { ALL_LINES, PATTERNS, STRUCTURES, UNITS, WORDS, WORD_ORDER, linesWithWord, lessonById, unitById, type Line, type Token } from "./course";
 import type { ProgressData } from "./store";
 import { dueItems } from "./stats";
 
@@ -11,7 +11,10 @@ export type Exercise =
   | { kind: "fill"; lineId: string; blank: number; options: string[] }
   | { kind: "match"; words: string[] }
   | { kind: "build"; lineId: string; from: number; to: number; extras: Token[] }
-  | { kind: "meaning"; lineId: string; options: string[] };
+  | { kind: "meaning"; lineId: string; options: string[] }
+  | { kind: "structure"; structure: string }
+  | { kind: "arrange"; lineId: string; extras: string[] }
+  | { kind: "read"; lineId: string; highlight?: string[]; title?: "verse" | "chunk" };
 
 export type Step = Exercise & { id: string; item?: string };
 
@@ -24,11 +27,18 @@ function setPool(unitIndex: number | null) {
   for (const u of UNITS.slice(0, Math.max(unitIndex + 1, 2))) for (const l of u.lines) if (!seen.has(l.id)) { seen.add(l.id); poolLines.push(l); }
 }
 
-export const isGraded = (e: Exercise) => e.kind !== "intro" && e.kind !== "pattern";
+export const isGraded = (e: Exercise) => e.kind !== "intro" && e.kind !== "pattern" && e.kind !== "structure" && e.kind !== "read";
 
 // ---------- helpers ----------
 const LINE_MAP: Record<string, Line> = {};
-for (const u of UNITS) for (const l of u.lines) LINE_MAP[l.id] = l;
+for (const u of UNITS) {
+  for (const l of u.lines) LINE_MAP[l.id] = l;
+  for (const l of u.newVerses || []) LINE_MAP[l.id] = l;
+  for (const s of u.structures || []) {
+    for (const l of [...s.quran, ...s.everyday, ...(s.chunkVerses || [])]) LINE_MAP[l.id] = l;
+    if (s.chunk) LINE_MAP[s.chunk.id] = s.chunk;
+  }
+}
 for (const l of ALL_LINES) LINE_MAP[l.id] = l;
 export const lineById = (id: string) => LINE_MAP[id];
 
@@ -126,6 +136,8 @@ export function buildLesson(lessonId: string, progress: ProgressData): Step[] {
   const lesson = lessonById(lessonId);
   setPool(lesson.unitIndex);
   const unit = unitById(lesson.unitId);
+  if (lesson.type === "structure") return structureLesson(lessonId, progress);
+  if (lesson.type === "verses") return versesLesson(unit.id);
   return lesson.type === "final" ? finalLesson(unit.id, progress) : learnLesson(lessonId, progress);
 }
 
@@ -204,5 +216,75 @@ export function buildPractice(progress: ProgressData, size = 10): Step[] {
   }
   const wordsOnly = chosen.filter((k) => !k.startsWith("p:"));
   if (wordsOnly.length >= 4) steps.splice(Math.floor(steps.length / 2), 0, { id: sid(), kind: "match", words: shuffle(wordsOnly).slice(0, 5) });
+  return steps;
+}
+
+// ---------- sentence structures ----------
+function arrange(line: Line): Step {
+  const own = new Set(line.tokens.map((t) => t.ar));
+  const extras = shuffle(
+    Array.from(new Set(poolLines.flatMap((l) => l.tokens).map((t) => t.ar))).filter((a) => !own.has(a) && a.length < 14),
+  ).slice(0, 2);
+  return { id: sid(), kind: "arrange", lineId: line.id, extras };
+}
+
+function structureLesson(lessonId: string, progress: ProgressData): Step[] {
+  const lesson = lessonById(lessonId);
+  const st = STRUCTURES[lesson.structure!];
+  const part = lesson.part ?? 1;
+  const steps: Step[] = [];
+  const words = lesson.words;
+  for (let i = 0; i < words.length; i += 2) {
+    const pair = words.slice(i, i + 2);
+    pair.forEach((w) => steps.push({ id: sid(), kind: "intro", word: w }));
+    pair.forEach((w, j) => steps.push(mcq(w, j === 0 ? "ar2mean" : "mean2ar", progress)));
+  }
+  for (const p of lesson.patterns) {
+    steps.push({ id: sid(), kind: "pattern", pattern: p });
+    const q = patternQ(p, [...st.everyday, ...poolLines]);
+    if (q) steps.push(q);
+  }
+  if (part === 1) steps.push({ id: sid(), kind: "structure", structure: st.id });
+
+  // sentences the learner can build now (all words known or introduced in this lesson)
+  const later = new Set(
+    (lesson.parts ?? 1) > part
+      ? UNITS.flatMap((u) => u.lessons).filter((l) => l.structure === st.id && (l.part ?? 1) > part).flatMap((l) => l.words)
+      : [],
+  );
+  const ready = st.everyday.filter((l) => l.tokens.every((t) => !later.has(t.key)));
+  const withNew = ready.filter((l) => l.tokens.some((t) => words.includes(t.key)));
+  const sentences = [...withNew, ...shuffle(ready.filter((l) => !withNew.includes(l)))].slice(0, 5);
+  const practice: Step[] = [];
+  sentences.forEach((l, i) => practice.push(i % 2 === 0 ? arrange(l) : build(l)));
+  const ql = st.quran[part === 1 ? 0 : st.quran.length - 1];
+  const m = ql && meaningQ(ql);
+  if (m) practice.splice(1, 0, m);
+  const fl = sentences.find((l) => l.tokens.length >= 2);
+  if (fl) { const f = fill(fl); if (f) practice.push(f); }
+  if (st.chunk && part === 1) {
+    const ck = st.chunk.tokens.map((t) => t.key);
+    for (const v of (st.chunkVerses || []).slice(0, 2)) {
+      practice.push({ id: sid(), kind: "read", lineId: v.id, highlight: ck, title: "chunk" });
+      const mq = meaningQ(v);
+      if (mq) practice.push(mq);
+    }
+  }
+  const matchWords = Array.from(new Set([...words, ...sentences.flatMap((l) => l.tokens.map((t) => t.key))])).filter((k) => WORDS[k]).slice(0, 5);
+  if (matchWords.length >= 3) practice.push({ id: sid(), kind: "match", words: shuffle(matchWords) });
+  return [...steps, ...practice];
+}
+
+// ---------- read verses nobody taught you ----------
+function versesLesson(unitId: string): Step[] {
+  const u = unitById(unitId);
+  const steps: Step[] = [];
+  for (const v of u.newVerses) {
+    steps.push({ id: sid(), kind: "read", lineId: v.id, title: "verse" });
+    const known = v.tokens.filter((t) => WORDS[t.key] && t.known);
+    const m = meaningQ(v);
+    if (m) steps.push(m);
+    if (known.length) { const sp = spot(pick(known).key, [v]); if (sp) steps.push(sp); }
+  }
   return steps;
 }

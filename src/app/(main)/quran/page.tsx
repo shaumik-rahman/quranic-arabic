@@ -5,12 +5,14 @@ import { useProgress } from "@/lib/store";
 import { quranCoverage, surahCoverage } from "@/lib/stats";
 import { useT } from "@/lib/i18n";
 import { Ring, fmtPct } from "@/components/ui";
+import { useReadableVerses } from "@/lib/readable";
 
 export default function QuranPage() {
   const p = useProgress();
   const { lang } = useT();
   const [sort, setSort] = useState<"order" | "best" | "short">("order");
   const cov = quranCoverage(p);
+  const readable = useReadableVerses();
   const surahs = useMemo(() => {
     const s = surahCoverage(p);
     if (sort === "best") return [...s].sort((a, b) => b.pct - a.pct);
@@ -35,6 +37,17 @@ export default function QuranPage() {
           </div>
         </div>
       </section>
+
+      {readable && readable.count > 0 && (
+        <section id="readable" className="card mt-4 p-4">
+          <div className={`font-black ${lang === "bn" ? "bn" : ""}`}>📖 {readable.count} {lang === "bn" ? "আয়াত আপনি পুরোপুরি বুঝতে পারেন" : "verses where you know every word"}</div>
+          <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto pb-1">
+            {readable.list.slice(0, 60).map(([s, v]) => (
+              <Link key={`${s}:${v}`} href={`/quran/${s}#v${v}`} className="shrink-0 rounded-full border-2 border-line bg-white px-2.5 py-0.5 text-sm font-bold text-emerald">{s}:{v}</Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       <p className={`mt-4 px-1 text-sm text-muted ${lang === "bn" ? "bn" : ""}`}>
         {lang === "bn" ? "যেকোনো সূরা খুলুন — যে শব্দগুলো আপনি জানেন সেগুলো সবুজ দেখাবে।" : "Open any surah — the words you know light up green."}

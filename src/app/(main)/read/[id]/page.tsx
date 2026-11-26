@@ -1,4 +1,5 @@
 "use client";
+import { useScript } from "@/lib/script";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ArrowLeft, Volume2 } from "lucide-react";
@@ -15,6 +16,7 @@ export default function ReadPage() {
   const { id } = useParams<{ id: string }>();
   const p = useProgress();
   const { lang } = useT();
+  const { A } = useScript();
   const text = textById(id);
   if (!text) return <p>Not found</p>;
   const und = textUnderstanding(p, text.id);
@@ -27,7 +29,7 @@ export default function ReadPage() {
         <div className="flex items-center gap-4">
           <Emoji e={text.emoji} className="text-5xl" />
           <div className="flex-1">
-            <div className="ar text-3xl leading-tight">{text.ar}</div>
+            <div className="ar text-3xl leading-tight">{A(text.ar)}</div>
             <div className={`text-lg font-black ${lang === "bn" ? "bn" : ""}`}>{lang === "bn" ? text.bn : text.en}</div>
             <div className={`text-sm text-white/80 ${lang === "bn" ? "bn" : ""}`}>{lang === "bn" ? text.desc_bn : text.desc_en}</div>
           </div>

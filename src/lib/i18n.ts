@@ -69,6 +69,18 @@ const S = {
   quitBody: ["Your progress in this lesson will be lost.", "এই পাঠের অগ্রগতি হারিয়ে যাবে।"],
   keepGoing: ["Keep learning", "চালিয়ে যান"],
   quitYes: ["Quit", "ছেড়ে দিন"],
+  sayInArabic: ["Build this in Arabic", "আরবিতে সাজান"],
+  structure: ["Sentence pattern", "বাক্যের গঠন"],
+  inYourText: ["In what you recite", "যা আপনি পড়েন"],
+  inQuran: ["Elsewhere in the Quran", "কুরআনের অন্য জায়গায়"],
+  everyday: ["Now you say it", "এবার আপনি বলুন"],
+  readNewVerse: ["Read a verse you never studied", "এমন আয়াত পড়ুন যা আগে শেখেননি"],
+  readPhrase: ["Spot the phrase", "বাক্যাংশটি খুঁজুন"],
+  showMeaning: ["Show meaning", "অর্থ দেখুন"],
+  fadedHint: ["Faded words are new; their meaning is shown.", "ঝাপসা শব্দগুলো নতুন; অর্থ নিচে দেওয়া আছে।"],
+  makeSentences: ["Make sentences", "বাক্য গঠন"],
+  newVerses: ["New verses", "নতুন আয়াত"],
+  versesYouUnderstand: ["verses you can understand", "আয়াত আপনি বুঝতে পারেন"],
 };
 export type StrKey = keyof typeof S;
 

@@ -23,6 +23,12 @@
   --font-bangla: "Hind Siliguri", "Nunito Variable", "Amiri Quran", sans-serif;
 }
 
+@font-face {
+  font-family: "IndoPak Nastaleeq";
+  src: url("/fonts/indopak-nastaleeq.woff2") format("woff2");
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
   --safe-top: env(safe-area-inset-top, 0px);
@@ -48,6 +54,14 @@ body {
   line-height: 2.1;
   font-feature-settings: "calt", "liga";
 }
+html[data-script="indopak"] .ar {
+  font-family: "IndoPak Nastaleeq", var(--font-quran);
+  line-height: 2.4;
+  word-spacing: 0.05em;
+}
+html[data-script="indopak"] body {
+  font-family: "Nunito Variable", "Hind Siliguri", "IndoPak Nastaleeq", "Amiri Quran", ui-rounded, system-ui, sans-serif;
+}
 .bn,
 :lang(bn) {
   font-family: var(--font-bangla);
@@ -62,7 +76,8 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%230e7c66' stroke-opacity='0.06' stroke-width='1.2'%3E%3Crect x='16' y='16' width='24' height='24'/%3E%3Crect x='16' y='16' width='24' height='24' transform='rotate(45 28 28)'/%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* chunky 3D buttons */
+/* chunky 3D buttons — in the components layer so utility classes (selected / right / wrong states) can override them */
+@layer components {
 .btn {
   @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 font-extrabold tracking-wide transition select-none;
   @apply active:translate-y-[3px] disabled:opacity-50 disabled:active:translate-y-0;
@@ -84,6 +99,7 @@ body {
 }
 .chip {
   @apply rounded-2xl border-2 border-line bg-white shadow-[0_3px_0_var(--color-line)] transition active:translate-y-[2px] active:shadow-none;
+}
 }
 
 @keyframes pop {

@@ -1,4 +1,5 @@
 "use client";
+import { useScript } from "@/lib/script";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { PATTERNS, UNITS, WORDS, WORD_ORDER, meaning, PATTERN_UNIT, WORD_UNIT } from "@/lib/course";
@@ -17,6 +18,7 @@ export default function LibraryPage() {
   const { isTeacher } = useAuth();
   const { t, lang } = useT();
   const open = useWordSheet();
+  const { A, T } = useScript();
   const [tab, setTab] = useState<"words" | "patterns">("words");
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<Sort>("path");
@@ -26,7 +28,7 @@ export default function LibraryPage() {
   const words = useMemo(() => {
     let ks = WORD_ORDER.filter((k) => showAll || p.items[k]);
     const needle = q.trim().toLowerCase();
-    if (needle) ks = ks.filter((k) => { const w = WORDS[k]; return w.en.toLowerCase().includes(needle) || w.bn.includes(needle) || w.ar.includes(needle) || w.root.includes(needle) || w.lemma.includes(needle); });
+    if (needle) ks = ks.filter((k) => { const w = WORDS[k]; return w.en.toLowerCase().includes(needle) || w.bn.includes(needle) || (w.ar.includes(needle) || A(w.ar).includes(needle)) || w.root.includes(needle) || w.lemma.includes(needle); });
     if (sort === "freq") ks = [...ks].sort((a, b) => WORDS[b].count - WORDS[a].count);
     if (sort === "root") ks = [...ks].sort((a, b) => (WORDS[a].root || "ي").localeCompare(WORDS[b].root || "ي", "ar"));
     if (sort === "weak") ks = [...ks].sort((a, b) => (p.items[a]?.interval ?? -1) - (p.items[b]?.interval ?? -1));
@@ -70,10 +72,10 @@ export default function LibraryPage() {
               {words.map((k) => {
                 const w = WORDS[k];
                 return (
-                  <button key={k} onClick={() => open({ ar: w.ar.split(" / ")[0], en: w.en, bn: w.bn, key: k, audio: w.audio })}
+                  <button key={k} onClick={() => open({ ar: w.ar.split(" / ")[0], ip: A(w.ar.split(" / ")[0]), en: w.en, bn: w.bn, key: k, audio: w.audio })}
                     className="flex w-full items-center gap-3 px-3 py-2.5 text-left">
                     <Emoji e={w.emoji} className="w-8 text-center text-2xl" />
-                    <div className="w-24 text-right"><span className="ar text-2xl">{w.ar.split(" / ")[0]}</span></div>
+                    <div className="w-24 text-right"><span className="ar text-2xl">{A(w.ar.split(" / ")[0])}</span></div>
                     <div className="min-w-0 flex-1">
                       <div className={`truncate text-sm font-bold ${lang === "bn" ? "bn" : ""}`}>{meaning(w, lang)}</div>
                       <div className="text-xs text-muted">
@@ -100,15 +102,15 @@ export default function LibraryPage() {
               return (
                 <div key={id} className="card p-4">
                   <div className="flex items-center gap-3">
-                    <span className="ar min-w-16 text-center text-4xl text-emerald">{pt.ar}</span>
+                    <span className="ar min-w-16 text-center text-4xl text-emerald">{A(pt.ar)}</span>
                     <div className={`flex-1 text-lg font-black ${lang === "bn" ? "bn" : ""}`}>{pt.emoji} {lang === "bn" ? pt.bn : pt.en}</div>
                     <StrengthDots level={strengthLevel(p.items["p:" + id])} />
                   </div>
-                  <p className={`mt-2 text-sm text-ink/80 ${lang === "bn" ? "bn" : ""}`}>{lang === "bn" ? pt.expl_bn : pt.expl_en}</p>
+                  <p className={`mt-2 text-sm text-ink/80 ${lang === "bn" ? "bn" : ""}`}>{A(lang === "bn" ? pt.expl_bn : pt.expl_en)}</p>
                   <div className="mt-2 flex flex-wrap gap-2" dir="rtl">
                     {pt.examples.map((e, i) => (
                       <button key={i} onClick={() => playWord(e.audio)} className="rounded-xl bg-sand px-2 py-1 text-center">
-                        <span className="ar block text-xl">{e.ar}</span>
+                        <span className="ar block text-xl">{A(e.ar).split(" ")[0]}</span>
                         <span className={`block text-xs text-muted ${lang === "bn" ? "bn" : ""}`} dir="ltr">{lang === "bn" ? e.bn : e.en}</span>
                       </button>
                     ))}

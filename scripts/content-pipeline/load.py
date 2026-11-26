@@ -36,3 +36,23 @@ def stem(segs):
     return segs[0]
 def lemkey(sg):
     return sg['f'].get('LEM','?')+'|'+sg['f'].get('ROOT','')
+
+def load_indopak(words):
+    """IndoPak Nastaleeq text (quran.com / QUL) split into words aligned with the corpus.
+    Pause marks (tokens without letters) are attached to the preceding word."""
+    import json, re, collections
+    path = os.path.join(SRC, 'indopak.json')
+    if not os.path.exists(path): return {}
+    d = json.load(open(path, encoding='utf-8'))
+    LET = re.compile(r'[ء-يٱ-ۓۺ-ۿ]')
+    cnt = collections.Counter((a, b) for (a, b, c) in words)
+    ip = {}
+    for k, t in d.items():
+        s, v = map(int, k.split(':'))
+        out = []
+        for tok in t.split():
+            if LET.search(tok) or not out: out.append(tok)
+            else: out[-1] += ' ' + tok
+        if len(out) != cnt[(s, v)]: continue  # 7 verses split differently: no IndoPak for them
+        for i, w in enumerate(out, 1): ip[(s, v, i)] = w
+    return ip

@@ -1,4 +1,5 @@
 "use client";
+import { useScript } from "@/lib/script";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Volume2, X } from "lucide-react";
 import { PATTERNS, TOTAL_TOKENS, WORDS, meaning, type Token } from "@/lib/course";
@@ -11,6 +12,7 @@ import { Emoji, StrengthDots, fmtPct } from "./ui";
 /** Anything tappable: a curriculum token, a curriculum word, or a word from the full-Quran reader. */
 export interface SheetPayload {
   ar: string;
+  ip?: string | null; // IndoPak spelling when known
   en?: string; // contextual gloss
   bn?: string;
   key?: string; // curriculum / lemma key
@@ -22,7 +24,7 @@ export interface SheetPayload {
 
 const Ctx = createContext<(p: SheetPayload) => void>(() => {});
 export const useWordSheet = () => useContext(Ctx);
-export const tokenPayload = (t: Token): SheetPayload => ({ ar: t.ar, en: t.en, bn: t.bn, key: t.key, pats: t.pats, audio: t.audio, tr: t.tr });
+export const tokenPayload = (t: Token): SheetPayload => ({ ar: t.ar, ip: t.ip, en: t.en, bn: t.bn, key: t.key, pats: t.pats, audio: t.audio, tr: t.tr });
 
 export function WordSheetProvider({ children }: { children: React.ReactNode }) {
   const [p, setP] = useState<SheetPayload | null>(null);
@@ -40,6 +42,7 @@ function Sheet({ p, onClose }: { p: SheetPayload; onClose: () => void }) {
   const [more, setMore] = useState(false);
   const items = useProgress((s) => s.items);
   const translit = useProgress((s) => s.settings.translit);
+  const { A, T } = useScript();
   const w = p.key ? WORDS[p.key] : undefined;
   useEffect(() => { setMore(false); }, [p]);
   useEffect(() => {
@@ -63,7 +66,7 @@ function Sheet({ p, onClose }: { p: SheetPayload; onClose: () => void }) {
         <div className="flex items-start gap-4">
           {w?.emoji ? <Emoji e={w.emoji} className="text-5xl" /> : null}
           <div className="flex-1 min-w-0">
-            <div className="ar text-4xl text-ink" dir="rtl">{p.ar}</div>
+            <div className="ar text-4xl text-ink" dir="rtl">{T(p)}</div>
             {translit && p.tr && <div className="text-sm italic text-muted">{p.tr}</div>}
           </div>
           <div className="flex flex-col gap-2">
@@ -77,7 +80,7 @@ function Sheet({ p, onClose }: { p: SheetPayload; onClose: () => void }) {
         <div className={`mt-2 text-xl font-extrabold ${lang === "bn" ? "bn" : ""}`}>{ctxGloss || core}</div>
         {core && ctxGloss && core !== ctxGloss && (
           <div className={`text-muted ${lang === "bn" ? "bn" : ""}`}>
-            <span className="ar text-lg">{w!.ar}</span> = {core}
+            <span className="ar text-lg">{A(w!.ar)}</span> = {core}
           </div>
         )}
         {known && (
@@ -89,7 +92,7 @@ function Sheet({ p, onClose }: { p: SheetPayload; onClose: () => void }) {
           <div className="mt-3 rounded-2xl bg-gold-light p-3">
             <div className="mb-1 text-xs font-extrabold uppercase tracking-wider text-gold-dark">{t("related")}</div>
             {cogs.map(([l, v]) => (
-              <div key={l} className="text-sm"><span className="mr-2 inline-block w-14 font-bold text-muted">{l === "en" ? "English" : l === "bn" ? "বাংলা" : "हिन्दी"}</span><span className={l === "bn" ? "bn" : ""}>{v}</span></div>
+              <div key={l} className="text-sm"><span className="mr-2 inline-block w-20 font-bold text-muted">{l === "en" ? "English" : l === "bn" ? "বাংলা" : "Hindi/Urdu"}</span><span className={l === "bn" ? "bn" : ""}>{v}</span></div>
             ))}
           </div>
         )}
@@ -115,16 +118,16 @@ function Sheet({ p, onClose }: { p: SheetPayload; onClose: () => void }) {
                 </div>
               </div>
             )}
-            {w?.tip && <div className="rounded-2xl bg-sky-light p-3 text-sm">💡 {w.tip}</div>}
+            {w?.tip && <div className="rounded-2xl bg-sky-light p-3 text-sm">💡 {A(w.tip)}</div>}
             {p.pats && p.pats.length > 0 && (
               <div>
                 <div className="mb-2 text-xs font-extrabold uppercase tracking-wider text-muted">{t("newPattern")}</div>
                 <div className="space-y-2">
                   {p.pats.filter((x) => PATTERNS[x]).map((x) => (
                     <div key={x} className="rounded-2xl bg-white p-3 text-sm border-2 border-line">
-                      <span className="ar mr-2 text-xl text-emerald">{PATTERNS[x].ar}</span>
+                      <span className="ar mr-2 text-xl text-emerald">{A(PATTERNS[x].ar)}</span>
                       <b>{lang === "bn" ? PATTERNS[x].bn : PATTERNS[x].en}</b>
-                      <div className={`mt-1 text-muted ${lang === "bn" ? "bn" : ""}`}>{lang === "bn" ? PATTERNS[x].expl_bn : PATTERNS[x].expl_en}</div>
+                      <div className={`mt-1 text-muted ${lang === "bn" ? "bn" : ""}`}>{A(lang === "bn" ? PATTERNS[x].expl_bn : PATTERNS[x].expl_en)}</div>
                     </div>
                   ))}
                 </div>
@@ -138,7 +141,7 @@ function Sheet({ p, onClose }: { p: SheetPayload; onClose: () => void }) {
                     const fw = WORDS[f.key];
                     return (
                       <div key={f.key} className={`flex items-center gap-3 px-3 py-2 ${f.self ? "bg-emerald-light" : ""}`}>
-                        <div className="w-24 text-right"><span className="ar text-xl">{f.ex}</span></div>
+                        <div className="w-24 text-right"><span className="ar text-xl">{T({ ar: f.ex, ip: f.exIp })}</span></div>
                         <div className="flex-1 text-sm">
                           <div className="font-bold">{fw ? meaning(fw, lang) : f.gloss}</div>
                           <div className="text-xs text-muted">{f.count}× · {f.ref}{items[f.key] ? " · ✓" : ""}</div>

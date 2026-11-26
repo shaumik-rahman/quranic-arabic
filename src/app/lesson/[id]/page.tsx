@@ -1,4 +1,5 @@
 "use client";
+import { useScript } from "@/lib/script";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -21,6 +22,7 @@ function LessonInner() {
   const router = useRouter();
   const { t, lang } = useT();
   const { isTeacher } = useAuth();
+  const { A } = useScript();
   const valid = id in LESSON_INDEX;
   const [steps] = useState<Step[]>(() => (valid ? buildLesson(id, snapshot()) : []));
   const [before] = useState(() => quranCoverage(snapshot()).pctLearned);
@@ -44,7 +46,7 @@ function LessonInner() {
     );
   }
 
-  const xpFor = (info: FinishInfo) => (lesson.type === "final" ? 20 : 10) + (info.mistakes === 0 ? 5 : 0);
+  const xpFor = (info: FinishInfo) => (lesson.type === "final" ? 20 : lesson.type === "verses" ? 15 : 10) + (info.mistakes === 0 ? 5 : 0);
   const onFinish = (info: FinishInfo) => {
     const st = useProgress.getState();
     st.completeLesson(id, info.mistakes === 0);
@@ -62,8 +64,18 @@ function LessonInner() {
         <div className="mx-auto w-full max-w-md flex-1 pt-10">
           <div className="animate-pop text-7xl">{completesText ? completesText.emoji : "🎉"}</div>
           <h1 className={`mt-3 text-3xl font-black text-emerald ${lang === "bn" ? "bn" : ""}`}>
-            {completesText ? t("unitDone") : t("lessonDone")}
+            {completesText ? t("unitDone") : lesson.type === "verses" ? (lang === "bn" ? "মা শা আল্লাহ!" : "Masha'Allah!") : t("lessonDone")}
           </h1>
+          {lesson.type === "verses" && (
+            <p className={`mt-2 text-lg font-bold ${lang === "bn" ? "bn" : ""}`}>
+              {lang === "bn" ? `আপনি ${unit.newVerses.length}টি আয়াত বুঝলেন যা কেউ আপনাকে শেখায়নি।` : `You just understood ${unit.newVerses.length} verses nobody taught you.`}
+            </p>
+          )}
+          {lesson.type === "structure" && (
+            <p className={`mt-2 text-lg font-bold ${lang === "bn" ? "bn" : ""}`}>
+              {lang === "bn" ? "আপনি নিজেই আরবি বাক্য বানালেন!" : "You built Arabic sentences yourself!"}
+            </p>
+          )}
           {completesText && (
             <p className={`mt-2 text-lg font-bold ${lang === "bn" ? "bn" : ""}`}>
               {lang === "bn"
@@ -83,7 +95,7 @@ function LessonInner() {
                 {newWords.map((k) => (
                   <div key={k} className="flex items-center gap-3">
                     <Emoji e={WORDS[k].emoji} className="w-8 text-center text-2xl" />
-                    <span className="ar text-2xl">{WORDS[k].ar.split(" / ")[0]}</span>
+                    <span className="ar text-2xl">{A(WORDS[k].ar.split(" / ")[0])}</span>
                     <span className={`flex-1 text-sm font-bold ${lang === "bn" ? "bn" : ""}`}>{meaning(WORDS[k], lang)}</span>
                     <span className="text-xs text-muted">{WORDS[k].count}×</span>
                   </div>

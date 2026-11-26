@@ -320,3 +320,106 @@ PATTERNS = [
       expl_en="The shape مَـ…ـُو… (mafʿūl) means “the one it is done to”: مَغۡضُوب = one under anger, مَحۡمُود (Mahmud) = praised, مَحۡبُوب (Mahbub) = beloved.",
       expl_bn="মাফ‘উল গড়ন মানে “যার প্রতি করা হয়”: مَغۡضُوب = গজবপ্রাপ্ত, مَحۡمُود (মাহমুদ) = প্রশংসিত, مَحۡبُوب (মাহবুব) = প্রিয়।"),
 ]
+
+# ---------------------------------------------------------------------------
+# STRUCTURES — sentence shapes. Each is shown (1) in the text the learner knows, (2) elsewhere in the
+# Quran, (3) in everyday sentences the learner builds. Everyday words are all Quranic where possible.
+BN.update({
+ "2:2": ["সেই", "কিতাব"],
+})
+SEG_TR.update({
+ "2:2:1-2": ("That is the Book", "এটি সেই কিতাব"),
+ "112:1:2-4": ("He is Allah, One.", "তিনি আল্লাহ, এক।"),
+ "1:2:3-4": ("the Lord of the worlds", "জগতসমূহের রব"),
+ "1:2:1-2": ("All praise is for Allah", "সব প্রশংসা আল্লাহর"),
+ "110:1:3-4": ("the help of Allah", "আল্লাহর সাহায্য"),
+ "1:4:1-3": ("Master of the Day of Judgment", "বিচার দিনের মালিক"),
+ "1:6:2-3": ("the straight path", "সরল পথ"),
+ "2:255:49-50": ("the Most High, the Magnificent", "সর্বোচ্চ, মহান"),
+ "1:5:1-2": ("You alone we worship", "আমরা কেবল তোমারই ইবাদত করি"),
+ "103:3:2-5": ("those who believe and do good deeds", "যারা ঈমান আনে ও সৎকাজ করে"),
+ "1:7:1-3": ("the path of those You have blessed", "তাদের পথ, যাদের তুমি নিয়ামত দিয়েছ"),
+ "108:3": ("Indeed, your enemy is the one cut off.", "নিশ্চয়ই তোমার শত্রুই নির্বংশ।"),
+})
+
+def E(id, en, bn, tokens):
+    """An everyday sentence the learner builds. tokens: (arabic, en, bn, key, patterns)"""
+    return dict(id=id, en=en, bn=bn, tokens=tokens, everyday=True)
+
+HADHA = ("هَٰذَا", "This (is)", "এটি", "ذا|", [])
+DHALIKA = ("ذَٰلِكَ", "That (is)", "ওটি", "ذا|", [])
+EVERYDAY = [
+ # "is" is invisible
+ E("e_pen", "This is a pen.", "এটি একটি কলম।", [HADHA, ("قَلَمٌ", "a pen", "একটি কলম", "قَلَم|قلم", [])]),
+ E("e_house", "That is a house.", "ওটি একটি ঘর।", [DHALIKA, ("بَيۡتٌ", "a house", "একটি ঘর", "بَيْت|بيت", [])]),
+ E("e_book", "This is a book.", "এটি একটি বই।", [HADHA, ("كِتَابٌ", "a book", "একটি বই", "كِتاب|كتب", [])]),
+ E("e_father", "He is my father.", "তিনি আমার বাবা।", [("هُوَ", "He (is)", "তিনি", "PRON:3MS", []), ("أَبِي", "my father", "আমার বাবা", "أَب|أبو", ["i"])]),
+ E("e_mother", "She is my mother.", "তিনি আমার মা।", [("هِيَ", "She (is)", "তিনি", "PRON:3FS", []), ("أُمِّي", "my mother", "আমার মা", "أُمّ|أمم", ["i"])]),
+ E("e_rabbi", "Allah is my Lord.", "আল্লাহ আমার রব।", [("ٱللَّهُ", "Allah (is)", "আল্লাহ", "اللَّه|أله", []), ("رَبِّي", "my Lord", "আমার রব", "رَبّ|ربب", ["i"])]),
+ # "of" is invisible
+ E("e_kitabullah", "the Book of Allah", "আল্লাহর কিতাব", [("كِتَابُ", "the Book (of)", "কিতাব", "كِتاب|كتب", []), ("ٱللَّهِ", "Allah", "আল্লাহর", "اللَّه|أله", [])]),
+ E("e_baytabi", "my father's house", "আমার বাবার ঘর", [("بَيۡتُ", "the house (of)", "ঘর", "بَيْت|بيت", []), ("أَبِي", "my father", "আমার বাবার", "أَب|أبو", ["i"])]),
+ E("e_qalamummi", "my mother's pen", "আমার মায়ের কলম", [("قَلَمُ", "the pen (of)", "কলম", "قَلَم|قلم", []), ("أُمِّي", "my mother", "আমার মায়ের", "أُمّ|أمم", ["i"])]),
+ E("e_baytullah", "This is the House of Allah.", "এটি আল্লাহর ঘর।", [HADHA, ("بَيۡتُ", "the house (of)", "ঘর", "بَيْت|بيت", []), ("ٱللَّهِ", "Allah", "আল্লাহর", "اللَّه|أله", [])]),
+ # describing word comes after
+ E("e_bigmasjid", "a big mosque", "একটি বড় মসজিদ", [("مَسۡجِدٌ", "a mosque", "একটি মসজিদ", "مَسْجِد|سجد", []), ("كَبِيرٌ", "big", "বড়", "كَبِير|كبر", [])]),
+ E("e_thebighouse", "the big house", "বড় ঘরটি", [("ٱلۡبَيۡتُ", "the house", "ঘরটি", "بَيْت|بيت", ["al"]), ("ٱلۡكَبِيرُ", "the big", "বড়", "كَبِير|كبر", ["al"])]),
+ E("e_houseisbig", "The house is big.", "ঘরটি বড়।", [("ٱلۡبَيۡتُ", "The house (is)", "ঘরটি", "بَيْت|بيت", ["al"]), ("كَبِيرٌ", "big", "বড়", "كَبِير|كبر", [])]),
+ E("e_newpen", "The pen is new.", "কলমটি নতুন।", [("ٱلۡقَلَمُ", "The pen (is)", "কলমটি", "قَلَم|قلم", ["al"]), ("جَدِيدٌ", "new", "নতুন", "جَدِيد|جدد", [])]),
+ E("e_masjidnear", "The mosque is near.", "মসজিদটি কাছে।", [("ٱلۡمَسۡجِدُ", "The mosque (is)", "মসজিদটি", "مَسْجِد|سجد", ["al"]), ("قَرِيبٌ", "near", "কাছে", "قَرِيب|قرب", [])]),
+ E("e_thisbigmasjid", "This is a big mosque.", "এটি একটি বড় মসজিদ।", [HADHA, ("مَسۡجِدٌ", "a mosque", "একটি মসজিদ", "مَسْجِد|سجد", []), ("كَبِيرٌ", "big", "বড়", "كَبِير|كبر", [])]),
+ # the verb shows who
+ E("e_weread", "We read the Quran.", "আমরা কুরআন পড়ি।", [("نَقۡرَأُ", "We read", "আমরা পড়ি", "قَرَأَ|قرأ", ["we_do"]), ("ٱلۡقُرۡءَانَ", "the Quran", "কুরআন", "قُرْءان|قرأ", ["al"])]),
+ E("e_iwrite", "I write with the pen.", "আমি কলম দিয়ে লিখি।", [("أَكۡتُبُ", "I write", "আমি লিখি", "كَتَبَ|كتب", ["i_do"]), ("بِٱلۡقَلَمِ", "with the pen", "কলম দিয়ে", "قَلَم|قلم", ["bi", "al"])]),
+ E("e_fathergoes", "My father goes to the mosque.", "আমার বাবা মসজিদে যান।", [("يَذۡهَبُ", "goes", "যান", "ذَهَبَ|ذهب", ["ya"]), ("أَبِي", "my father", "আমার বাবা", "أَب|أبو", ["i"]), ("إِلَى", "to", "দিকে", "إِلَى|", []), ("ٱلۡمَسۡجِدِ", "the mosque", "মসজিদ", "مَسْجِد|سجد", ["al"])]),
+ E("e_wego", "We go to the mosque.", "আমরা মসজিদে যাই।", [("نَذۡهَبُ", "We go", "আমরা যাই", "ذَهَبَ|ذهب", ["we_do"]), ("إِلَى", "to", "দিকে", "إِلَى|", []), ("ٱلۡمَسۡجِدِ", "the mosque", "মসজিদ", "مَسْجِد|سجد", ["al"])]),
+ # inna / alladhina
+ E("e_innahouse", "Indeed, the house is near.", "নিশ্চয়ই ঘরটি কাছে।", [("إِنَّ", "Indeed", "নিশ্চয়ই", "إِنّ|", []), ("ٱلۡبَيۡتَ", "the house", "ঘরটি", "بَيْت|بيت", ["al"]), ("قَرِيبٌ", "(is) near", "কাছে", "قَرِيب|قرب", [])]),
+ E("e_innaallah", "Indeed, Allah is near.", "নিশ্চয়ই আল্লাহ কাছে।", [("إِنَّ", "Indeed", "নিশ্চয়ই", "إِنّ|", []), ("ٱللَّهَ", "Allah", "আল্লাহ", "اللَّه|أله", []), ("قَرِيبٌ", "(is) near", "কাছে", "قَرِيب|قرب", [])]),
+ E("e_alladhi", "the one who reads the Quran", "যে কুরআন পড়ে", [("ٱلَّذِي", "the one who", "যে", "الَّذِي|", []), ("يَقۡرَأُ", "reads", "পড়ে", "قَرَأَ|قرأ", ["ya"]), ("ٱلۡقُرۡءَانَ", "the Quran", "কুরআন", "قُرْءان|قرأ", ["al"])]),
+ E("e_alladhina", "those who went to the mosque", "যারা মসজিদে গেল", [("ٱلَّذِينَ", "those who", "যারা", "الَّذِي|", []), ("ذَهَبُواْ", "went", "গেল", "ذَهَبَ|ذهب", ["they_did"]), ("إِلَى", "to", "দিকে", "إِلَى|", []), ("ٱلۡمَسۡجِدِ", "the mosque", "মসজিদ", "مَسْجِد|سجد", ["al"])]),
+]
+
+def S(id, unit, en, bn, emoji, shape, expl_en, expl_bn, quran, everyday, chunk=None):
+    return dict(id=id, unit=unit, en=en, bn=bn, emoji=emoji, shape=shape, expl_en=expl_en, expl_bn=expl_bn,
+                quran=quran, everyday=everyday, chunk=chunk)
+
+STRUCTURES = [
+ S("is", "u1", "“is” is invisible", "“হয়/হচ্ছে” শব্দটি লুকানো", "👻",
+   [("ٱللَّهُ", "Allah", "আল্লাহ", "thing"), ("أَكۡبَرُ", "(is) greatest", "সবচেয়ে বড়", "about")],
+   "Arabic has no word for “is”. Put two words side by side and you have a sentence: the first is what you're talking about, the second says something about it.",
+   "আরবিতে “হয়/হচ্ছে” শব্দ নেই। দুটি শব্দ পাশাপাশি বসালেই বাক্য হয়: প্রথমটি কার কথা, দ্বিতীয়টি তার সম্পর্কে কী।",
+   [Q(1, 2, 1, 2), Q(2, 2, 1, 2), Q(112, 1, 2, 4)],
+   ["e_pen", "e_house", "e_book", "e_father", "e_mother", "e_rabbi"]),
+ S("of", "u1", "“of” is invisible", "“-এর/-র” লুকানো", "🔗",
+   [("رَبِّ", "Lord", "রব", "thing"), ("ٱلۡعَٰلَمِينَ", "(of) the worlds", "জগতসমূহের", "whose")],
+   "Put a noun right before another one and the second means “of …”: رَبِّ ٱلۡعَٰلَمِينَ = Lord of the worlds. The first word never takes ٱلۡـ.",
+   "একটি বিশেষ্যের ঠিক পরে আরেকটি বসালে দ্বিতীয়টির অর্থ হয় “-এর”: رَبِّ ٱلۡعَٰلَمِينَ = জগতসমূহের রব। প্রথম শব্দে কখনো ٱلۡـ বসে না।",
+   [Q(1, 2, 3, 4), Q(1, 4, 1, 3), Q(110, 1, 3, 4)],
+   ["e_kitabullah", "e_baytabi", "e_qalamummi", "e_baytullah"]),
+ S("after", "u2", "The describing word comes after", "বিশেষণ পরে বসে", "🎨",
+   [("ٱلصِّرَٰطَ", "the path", "পথ", "thing"), ("ٱلۡمُسۡتَقِيمَ", "the straight", "সরল", "like")],
+   "A describing word comes after its noun and copies its ٱلۡـ: ٱلصِّرَٰطَ ٱلۡمُسۡتَقِيمَ = the straight path. If only the first word has ٱلۡـ, it's a sentence: ٱلۡبَيۡتُ كَبِيرٌ = the house is big.",
+   "বিশেষণ বিশেষ্যের পরে বসে এবং তার ٱلۡـ নকল করে: ٱلصِّرَٰطَ ٱلۡمُسۡتَقِيمَ = সরল পথ। শুধু প্রথম শব্দে ٱلۡـ থাকলে সেটা বাক্য: ٱلۡبَيۡتُ كَبِيرٌ = ঘরটি বড়।",
+   [Q(1, 6, 2, 3), Q(1, 3), Q(2, 255, 49, 50)],
+   ["e_bigmasjid", "e_thebighouse", "e_houseisbig", "e_newpen", "e_masjidnear", "e_thisbigmasjid"]),
+ S("verb", "u2", "The verb tells you who", "ক্রিয়াই বলে দেয় কে", "🏃",
+   [("نَـ", "we", "আমরা", "who"), ("عۡبُدُ", "worship", "ইবাদত করি", "do")],
+   "The first letter of a verb tells you who is doing it: نَـ = we, أَ = I, يَـ = he. نَعۡبُدُ = we worship. Arabic often puts the verb first: يَذۡهَبُ أَبِي = goes my father → my father goes. Putting the object first adds “only”: إِيَّاكَ نَعۡبُدُ = You alone we worship.",
+   "ক্রিয়ার প্রথম অক্ষর বলে কে করছে: نَـ = আমরা, أَ = আমি, يَـ = সে। আরবিতে প্রায়ই ক্রিয়া আগে আসে: يَذۡهَبُ أَبِي = আমার বাবা যান। কর্ম আগে বসালে “কেবল” অর্থ হয়: إِيَّاكَ نَعۡبُدُ = কেবল তোমারই ইবাদত করি।",
+   [Q(1, 5, 1, 2), Q(1, 5)],
+   ["e_weread", "e_iwrite", "e_fathergoes", "e_wego"]),
+ S("inna", "u7", "إِنَّ = “indeed”", "إِنَّ = “নিশ্চয়ই”", "❗",
+   [("إِنَّ", "Indeed", "নিশ্চয়ই", "inna"), ("ٱلۡإِنسَٰنَ", "mankind", "মানুষ", "thing"), ("لَفِي خُسۡرٍ", "(is) surely in loss", "অবশ্যই ক্ষতিতে", "about")],
+   "إِنَّ makes a statement strong. The word after it ends in -a (ٱلۡإِنسَٰنَ, ٱللَّهَ). Sometimes لَـ is added for even more force: لَفِي خُسۡرٍ = surely in loss.",
+   "إِنَّ বাক্যকে জোরালো করে। এর পরের শব্দ -আ দিয়ে শেষ হয় (ٱلۡإِنسَٰنَ, ٱللَّهَ)। আরও জোর দিতে লَـ যোগ হয়: لَفِي خُسۡرٍ = অবশ্যই ক্ষতিতে।",
+   [Q(103, 2), Q(108, 3)],
+   ["e_innahouse", "e_innaallah"]),
+ S("alladhina", "u7", "ٱلَّذِينَ + verb = “those who …”", "ٱلَّذِينَ + ক্রিয়া = “যারা …”", "👥",
+   [("ٱلَّذِينَ", "those who", "যারা", "who"), ("ءَامَنُواْ", "believed", "ঈমান এনেছে", "do")],
+   "ٱلَّذِي (one) / ٱلَّذِينَ (many) + a verb = “the one(s) who …”. The Quran's most repeated description of the good: ٱلَّذِينَ ءَامَنُواْ وَعَمِلُواْ ٱلصَّٰلِحَٰتِ — learn it as one phrase.",
+   "ٱلَّذِي (একজন) / ٱلَّذِينَ (অনেকে) + ক্রিয়া = “যে / যারা …”। কুরআনে ভালো মানুষের সবচেয়ে বেশি আসা বর্ণনা: ٱلَّذِينَ ءَامَنُواْ وَعَمِلُواْ ٱلصَّٰلِحَٰتِ — পুরোটা একসাথে শিখুন।",
+   [Q(103, 3, 2, 5), Q(1, 7, 1, 3)],
+   ["e_alladhi", "e_alladhina"],
+   chunk=Q(103, 3, 2, 5)),
+]

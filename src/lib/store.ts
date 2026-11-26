@@ -14,6 +14,7 @@ export interface Settings {
   sound: boolean;
   leaderboard: boolean;
   displayName: string;
+  script?: "indopak" | "uthmani";
 }
 
 export interface ProgressData {
@@ -49,7 +50,7 @@ export const emptyProgress = (userId: string | null = null): ProgressData => ({
   heartsUpdatedAt: Date.now(),
   completed: {},
   items: {},
-  settings: { lang: "en", translit: false, dailyGoal: 20, sound: true, leaderboard: false, displayName: "" },
+  settings: { lang: "en", translit: false, dailyGoal: 20, sound: true, leaderboard: false, displayName: "", script: "indopak" },
 });
 
 interface Actions {

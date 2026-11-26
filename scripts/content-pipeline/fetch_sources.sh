@@ -9,4 +9,6 @@ npm pack -q @kmaslesa/holy-quran-word-by-word-full-data@1.0.6 quran-json@3.1.2 >
 mkdir -p wbw qj
 tar xzf kmaslesa-holy-quran-word-by-word-full-data-1.0.6.tgz -C wbw
 tar xzf quran-json-3.1.2.tgz -C qj
+# IndoPak Nastaleeq text (quran.com / QUL), via github.com/quran8vs/IndoPak
+curl -sL -o ../indopak.json https://raw.githubusercontent.com/quran8vs/IndoPak/main/data/db_font1.json
 echo "Sources ready in $(pwd)/.."

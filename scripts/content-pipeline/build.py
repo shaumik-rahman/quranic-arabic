@@ -7,7 +7,7 @@ Outputs:
   OUT/public/quran/lemmas.json
 """
 import json, os, sys, re, unicodedata, collections
-from load import load, stem
+from load import load, stem, load_indopak
 import content, texts as T
 content.W = {unicodedata.normalize('NFC', k): v for k, v in content.W.items()}
 for grp in T.HAND.values():
@@ -18,6 +18,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.abspath(os.path.join(HERE, '..', '..'))
 from load import SRC
 words, wb, tw, qj = load()
+IP = load_indopak(words)
+import ip_manual
+ip_manual.IP = {unicodedata.normalize('NFC', k): v for k, v in ip_manual.IP.items()}
+from indopak_convert import convert as to_indopak
+def ip_word(loc):
+    t = IP.get(loc)
+    return t.split(' ')[0] if t else None
 
 def key_of(sg):
     f = sg['f']
@@ -131,7 +138,7 @@ def quran_line(s, v, a, b):
         toks.append(dict(ar=tw.get(loc) or ''.join(sg['form'] for sg in words[loc]),
                          en=T.EN_OVERRIDE.get(loc, wbw_gloss(loc)), bn=bn[i] if i < len(bn) else '',
                          key=tok_key[loc], pats=patterns_of(words[loc]), audio=audio_of(loc), tr=wbw_tr(loc),
-                         loc=f'{s}:{v}:{w}'))
+                         loc=f'{s}:{v}:{w}', ip=IP.get(loc)))
     full = (a == 1 and b == allw[-1])
     seg_id = f'{s}:{v}' if full else f'{s}:{v}:{a}-{b}'
     if full: en, bn_tr = TR_EN[(s, v)], TR_BN[(s, v)]
@@ -148,9 +155,11 @@ def hand_line(group, lid):
     for (ar, en, bn, key, pats) in l['tokens']:
         loc = exact_idx.get(unicodedata.normalize('NFC', ar)) or norm_idx.get(norm2(ar))
         exact = loc is not None
+        ipt = ip_manual.IP.get(unicodedata.normalize('NFC', ar)) or (ip_word(loc) if loc else None) or to_indopak(ar, standalone=not toks)
+        if not ipt: problems.append('no IndoPak for hand token ' + ar)
         toks.append(dict(ar=ar, en=en, bn=bn, key=key, pats=pats,
                          audio=audio_of(loc) if loc and exact else None,
-                         tr=wbw_tr(loc) if loc and exact else '', loc=None))
+                         tr=wbw_tr(loc) if loc and exact else '', loc=None, ip=ipt))
     return dict(id=lid, ref='', kind='hand', verseAudio=None, en=l['en'], bn=l['bn'], tokens=toks,
                 note_en=l['note_en'], note_bn=l['note_bn'], ar=' '.join(t['ar'] for t in toks))
 
@@ -164,6 +173,71 @@ for t in T.TEXTS:
     texts_out.append(dict({k: v for k, v in t.items() if k != 'segs'}, lines=lines))
 text_by_id = {t['id']: t for t in texts_out}
 
+# ---------------- everyday sentences ----------------
+def everyday_line(e):
+    toks = []
+    for (ar, en, bn, key, pats) in e['tokens']:
+        key = unicodedata.normalize('NFC', key) if key else key
+        loc = exact_idx.get(unicodedata.normalize('NFC', ar)) or norm_idx.get(norm2(ar))
+        toks.append(dict(ar=ar, en=en, bn=bn, key=key, pats=pats, audio=audio_of(loc) if loc else None,
+                         tr=wbw_tr(loc) if loc else '', loc=None,
+                         ip=ip_manual.IP.get(unicodedata.normalize('NFC', ar)) or to_indopak(ar, standalone=not toks)))
+    return dict(id=e['id'], ref='', kind='everyday', verseAudio=None, en=e['en'], bn=e['bn'], tokens=toks,
+                ar=' '.join(t['ar'] for t in toks))
+EVERYDAY = {e['id']: everyday_line(e) for e in T.EVERYDAY}
+STRUCT_BY_UNIT = collections.defaultdict(list)
+for st in T.STRUCTURES: STRUCT_BY_UNIT[st['unit']].append(st)
+
+# verse -> distinct stem-lemma keys (for "new verses" and the readable-verses count)
+verse_keys = collections.defaultdict(list)
+for loc in sorted(words): verse_keys[loc[:2]].append(tok_key[loc])
+curriculum_verses = set()
+for t in T.TEXTS:
+    for sg in t['segs']:
+        if sg[0] == 'q': curriculum_verses.add((sg[1], sg[2]))
+for st in T.STRUCTURES:
+    for sg in st['quran']: curriculum_verses.add((sg[1], sg[2]))
+used_new_verses = set()
+used_verse_texts = set()
+
+def reader_line(s, v, known):
+    """A Quran verse outside the curriculum, for 'read a new verse'."""
+    toks = []
+    allw = sorted(w for (x, y, w) in words if (x, y) == (s, v))
+    for w in allw:
+        loc = (s, v, w); k = tok_key[loc]
+        toks.append(dict(ar=tw.get(loc) or ''.join(sg['form'] for sg in words[loc]), en=T.EN_OVERRIDE.get(loc, wbw_gloss(loc)),
+                         bn='', key=k, pats=patterns_of(words[loc]), audio=audio_of(loc), tr=wbw_tr(loc),
+                         loc=f'{s}:{v}:{w}', ip=IP.get(loc), known=k in known))
+    return dict(id=f'{s}:{v}', ref=f'{CH_EN[s]["transliteration"]} {s}:{v}', kind='quran', verseAudio='%03d%03d' % (s, v),
+                en=TR_EN[(s, v)], bn=TR_BN[(s, v)], tokens=toks, ar=' '.join(t['ar'] for t in toks), newVerse=True)
+
+def pick_new_verses(known, unit_words, n=3):
+    cands = []
+    for (s, v), ks in verse_keys.items():
+        if (s, v) in curriculum_verses or (s, v) in used_new_verses: continue
+        L = len(ks)
+        if L < 3 or L > 12: continue
+        unknown = [k for k in ks if k not in known]
+        if len(set(unknown)) > 2 or (L - len(unknown)) / L < 0.7: continue
+        rel = sum(1 for k in ks if k in unit_words)
+        cands.append((len(set(unknown)), -rel, L, s, v))
+    cands.sort()
+    out, surahs = [], set()
+    for c in cands:
+        txt = norm(' '.join(tw.get((c[3], c[4], w), '') for w in range(1, 40)))
+        if c[3] in surahs or txt in used_verse_texts: continue
+        out.append((c[3], c[4])); surahs.add(c[3]); used_verse_texts.add(txt)
+        if len(out) == n: break
+    return out
+
+def chunk_words(new_words):
+    n = len(new_words)
+    if n <= 5: return [new_words] if n else []
+    nl = max(1, round(n / 4)); size = n / nl
+    idx = [round(i * size) for i in range(nl + 1)]
+    return [new_words[idx[i]:idx[i + 1]] for i in range(nl)]
+
 # ---------------- units & lessons ----------------
 known_words, known_pats = set(), set()
 units_out = []
@@ -171,23 +245,43 @@ for u in T.UNITS:
     if 'segs' in u: lines = [build_seg(sg) for sg in u['segs']]
     else: lines = text_by_id[u['text']]['lines']
     new_words, new_pats, pat_first_word = [], [], {}
-    for ln in lines:
-        for tk in ln['tokens']:
+    def collect(toks, bucket):
+        for tk in toks:
             k = tk['key']
-            if k not in known_words and k not in new_words: new_words.append(k)
+            if k not in known_words and k not in new_words and k not in bucket: bucket.append(k)
             for p in tk['pats']:
                 if p not in known_pats and p not in new_pats:
                     new_pats.append(p); pat_first_word[p] = k
-    # chunk words into lessons of ~4
-    n = len(new_words); chunks = []
-    if n <= 5: chunks = [new_words]
-    else:
-        nl = max(1, round(n / 4)); size = n / nl
-        idx = [round(i * size) for i in range(nl + 1)]
-        chunks = [new_words[idx[i]:idx[i + 1]] for i in range(nl)]
-    lessons = []
-    for i, ch in enumerate(chunks):
-        lessons.append(dict(id=f'{u["id"]}-l{i+1}', type='learn', words=ch, patterns=[]))
+    for ln in lines: collect(ln['tokens'], new_words)
+    lessons = [dict(id=f'{u["id"]}-l{i+1}', type='learn', words=ch, patterns=[]) for i, ch in enumerate(chunk_words(new_words))]
+    # structure lessons: their everyday sentences may bring a few new (Quranic) words
+    structures = []
+    for st in STRUCT_BY_UNIT.get(u['id'], []):
+        st_words = []
+        ev_lines = [EVERYDAY[e] for e in st['everyday']]
+        for ln in ev_lines: collect(ln['tokens'], st_words)
+        new_words += st_words
+        q_lines = [build_seg(sg) for sg in st['quran']]
+        structures.append(dict(id=st['id'], en=st['en'], bn=st['bn'], emoji=st['emoji'],
+                               shape=[dict(ar=a, en=e, bn=b, role=r) for (a, e, b, r) in st['shape']],
+                               expl_en=st['expl_en'], expl_bn=st['expl_bn'],
+                               quran=q_lines, everyday=ev_lines,
+                               chunk=build_seg(st['chunk']) if st.get('chunk') else None))
+        parts = [st_words] if len(st_words) <= 5 else [st_words[:4], st_words[4:]]
+        for pi, pw in enumerate(parts):
+            lessons.append(dict(id=f'{u["id"]}-s-{st["id"]}' + (f'-{pi+1}' if len(parts) > 1 else ''), type='structure',
+                                structure=st['id'], part=pi + 1, parts=len(parts), words=pw, patterns=[]))
+        if st.get('chunk'):
+            ck = [t['key'] for t in structures[-1]['chunk']['tokens']]
+            found = []
+            for (vs, vv), ks in sorted(verse_keys.items(), key=lambda x: len(x[1])):
+                if (vs, vv) in curriculum_verses or len(ks) > 16: continue
+                if not any(ks[i:i + len(ck)] == ck for i in range(len(ks) - len(ck) + 1)): continue
+                unknown = set(k for k in ks if k not in known_words and k not in new_words and k not in ck)
+                if len(unknown) <= 3: found.append((len(unknown), vs, vv))
+            found.sort()
+            structures[-1]['chunkVerses'] = [reader_line(vs, vv, known_words | set(new_words)) for (_, vs, vv) in found[:3]]
+            structures[-1]['chunkCount'] = sum(1 for ks in verse_keys.values() if any(ks[i:i + len(ck)] == ck for i in range(len(ks) - len(ck) + 1)))
     # attach patterns to the lesson that introduces their first word (max 2 per lesson, overflow forward)
     for p in new_pats:
         fw = pat_first_word[p]
@@ -196,8 +290,16 @@ for u in T.UNITS:
         lessons[li]['patterns'].append(p)
     lessons.append(dict(id=f'{u["id"]}-final', type='final', words=[], patterns=[]))
     known_words |= set(new_words); known_pats |= set(new_pats)
+    # read new verses the learner can now (mostly) understand
+    picks = pick_new_verses(known_words, set(new_words))
+    new_verses = []
+    for (s, v) in picks:
+        used_new_verses.add((s, v)); new_verses.append(reader_line(s, v, known_words))
+    if new_verses:
+        lessons.append(dict(id=f'{u["id"]}-v', type='verses', words=[], patterns=[]))
     units_out.append(dict(id=u['id'], text=u['text'], en=u['en'], bn=u['bn'], completes=u.get('completes'),
                           lines=lines, lessons=lessons, newWords=new_words, newPatterns=new_pats,
+                          structures=structures, newVerses=new_verses,
                           emoji=text_by_id[u['text']]['emoji']))
 
 # ---------------- words ----------------
@@ -222,7 +324,7 @@ def family(root, self_key):
     out = []
     for k in sorted(by_root.get(root, []), key=lambda k: -cnt[k]):
         loc = first_loc[k]
-        out.append(dict(key=k, ar=lemma_ar(k), count=cnt[k], ex=tw.get(loc, ''), gloss=wbw_gloss(loc),
+        out.append(dict(key=k, ar=lemma_ar(k), count=cnt[k], ex=tw.get(loc, ''), exIp=ip_word(loc), gloss=wbw_gloss(loc),
                         ref=f'{loc[0]}:{loc[1]}', self=(k == self_key)))
     return out[:10]
 
@@ -254,7 +356,49 @@ used_pats = set(p for u in units_out for p in u['newPatterns'])
 for p in used_pats:
     if p not in patterns_out: problems.append('pattern without card: ' + p)
 
-course = dict(totalTokens=TOTAL, words=words_out, patterns=patterns_out,
+# ---------------- Uthmani -> IndoPak map for every Arabic string the app shows ----------------
+AR2IP = {}
+norm_quran = {}
+for loc, t in tw.items():
+    if loc in IP: norm_quran.setdefault(unicodedata.normalize('NFC', t), ip_word(loc))
+converted = {}
+def ip_for(s):
+    s = s.strip()
+    if unicodedata.normalize('NFC', s) in ip_manual.IP: return ip_manual.IP[unicodedata.normalize('NFC', s)]
+    v = norm_quran.get(unicodedata.normalize('NFC', s))
+    if v: return v
+    if re.search('[\u0621-\u064A\u0671]', s):
+        converted[s] = to_indopak(s, standalone=not s.startswith('ـ'))
+        return converted[s]
+    return None
+for t in texts_out:
+    for ln in t['lines']:
+        for tk in ln['tokens']:
+            if tk.get('ip'): AR2IP[tk['ar']] = tk['ip']
+missing_ip = []
+def need(s):
+    for part in s.split(' / '):
+        part = part.strip()
+        if not part or part in AR2IP: continue
+        v = ip_for(part)
+        if v: AR2IP[part] = v
+        else: missing_ip.append(part)
+for k, w in words_out.items(): need(w['ar'])
+for p in patterns_out.values():
+    need(p['ar'])
+    for e in p['examples']: need(e['ar'])
+ARAB_RUN = re.compile(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+(?:\s+[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+)*')
+for txt in [w['tip'] for w in words_out.values()] + [p['expl_en'] for p in T.PATTERNS] + [p['expl_bn'] for p in T.PATTERNS]:
+    for run in ARAB_RUN.findall(txt):
+        for part in run.split():
+            if len(part) > 1 and part not in AR2IP:
+                v = ip_for(part)
+                if v: AR2IP[part] = v
+                elif not re.fullmatch(r'[\u0621-\u064A]', part): missing_ip.append(part)
+if missing_ip: problems.append('no IndoPak for: ' + ' | '.join(sorted(set(missing_ip))))
+json.dump(converted, open(os.path.join(HERE, 'indopak_converted_review.json'), 'w'), ensure_ascii=False, indent=0)
+
+course = dict(totalTokens=TOTAL, ip=AR2IP, words=words_out, patterns=patterns_out,
               texts=[dict({k: v for k, v in t.items()}) for t in texts_out], units=units_out)
 
 # ---------------- coverage ----------------
@@ -288,14 +432,17 @@ for n in range(1, 115):
         if loc[0] == n: by_v[loc[1]].append(loc)
     for v in sorted(by_v):
         out.append(dict(v=v, en=TR_EN[(n, v)], bn=TR_BN[(n, v)],
-                        w=[[tw.get(l) or ''.join(sg['form'] for sg in words[l]), wbw_gloss(l), wbw_tr(l), lem_idx[tok_key[l]]]
+                        w=[[tw.get(l) or ''.join(sg['form'] for sg in words[l]), wbw_gloss(l), wbw_tr(l), lem_idx[tok_key[l]], IP.get(l, '')]
                            for l in sorted(by_v[v])]))
     dump(dict(n=n, verses=out), f'{OUT}/public/quran/{n}.json')
+
+json.dump([[s_, v_, sorted(set(lem_idx[k] for k in ks))] for (s_, v_), ks in sorted(verse_keys.items())],
+          open(f'{OUT}/public/quran/verse-lemmas.json', 'w'), separators=(',', ':'))
 
 # ---------------- report ----------------
 print('total tokens', TOTAL, '| curriculum words', len(words_out), '| patterns', len(used_pats))
 for u in units_out:
-    print(u['id'], u['en'], '| words', len(u['newWords']), '| lessons', [(l['id'], len(l['words']), l['patterns']) for l in u['lessons']])
+    print(u['id'], u['en'], '| words', len(u['newWords']), '| lessons', [(l['id'], len(l['words']), l['patterns']) for l in u['lessons']], '| new verses', [nv['id'] for nv in u['newVerses']])
 cov = sum(cnt.get(k, 0) for k in words_out)
 print('coverage if all learned: %.1f%%' % (100 * cov / TOTAL))
 print('unused content keys:', unused)

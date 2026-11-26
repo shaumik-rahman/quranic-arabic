@@ -1,4 +1,5 @@
 "use client";
+import { useScript } from "@/lib/script";
 import Link from "next/link";
 import { WORDS, meaning } from "@/lib/course";
 import { useProgress } from "@/lib/store";
@@ -12,6 +13,7 @@ export default function ReviewPage() {
   const p = useProgress();
   const { t, lang } = useT();
   const open = useWordSheet();
+  const { A } = useScript();
   const due = dueItems(p);
   const learned = wordKeysLearned(p);
   const cov = quranCoverage(p);
@@ -62,10 +64,10 @@ export default function ReviewPage() {
             {weakest.map((k) => {
               const w = WORDS[k];
               return (
-                <button key={k} onClick={() => open({ ...tokenPayload({ ar: w.ar.split(" / ")[0], en: w.en, bn: w.bn, key: k, pats: [], audio: w.audio, tr: "", loc: null }) })}
+                <button key={k} onClick={() => open({ ...tokenPayload({ ar: w.ar.split(" / ")[0], ip: A(w.ar.split(" / ")[0]), en: w.en, bn: w.bn, key: k, pats: [], audio: w.audio, tr: "", loc: null }) })}
                   className="flex w-full items-center gap-3 px-4 py-2.5 text-left">
                   <Emoji e={w.emoji} className="w-8 text-center text-2xl" />
-                  <span className="ar w-24 text-right text-2xl">{w.ar.split(" / ")[0]}</span>
+                  <span className="ar w-24 text-right text-2xl">{A(w.ar.split(" / ")[0])}</span>
                   <span className={`flex-1 text-sm font-bold ${lang === "bn" ? "bn" : ""}`}>{meaning(w, lang)}</span>
                   <StrengthDots level={strengthLevel(p.items[k])} />
                 </button>
