@@ -11,7 +11,7 @@ import { DEMO_MODE } from "@/lib/supabase";
 import { useT } from "@/lib/i18n";
 import { Bar } from "./ui";
 import {
-  ArrangeEx, BuildEx, FillEx, IntroEx, MatchEx, McqEx, MeaningEx, PatternEx, PatternQEx, ReadEx, SpotEx, StructureEx, type Evaluate,
+  ArrangeEx, BreakdownEx, BuildEx, FillEx, IntroEx, MatchEx, McqEx, MeaningEx, PatternEx, PatternQEx, ReadEx, SpotEx, StructureEx, type Evaluate,
 } from "./exercises/Exercises";
 
 export interface FinishInfo { mistakes: number; graded: number; newItems: string[] }
@@ -108,7 +108,7 @@ export function LessonPlayer({ steps: initial, mode, onFinish, renderDone }: {
   // test helper — only in demo mode with localStorage "qa-debug" = "1"
   const debug = DEMO_MODE && typeof window !== "undefined" && localStorage.getItem("qa-debug") === "1";
   const debugPass = () => {
-    if (step.kind === "intro" || step.kind === "pattern" || step.kind === "match" || step.kind === "structure" || step.kind === "read") return selfDone(true);
+    if (step.kind === "intro" || step.kind === "pattern" || step.kind === "match" || step.kind === "structure" || step.kind === "read" || step.kind === "breakdown") return selfDone(true);
     setFeedback({ correct: true, answer: "" }); setDoneGraded((d) => d + 1); grade(step.item, true);
   };
 
@@ -117,7 +117,7 @@ export function LessonPlayer({ steps: initial, mode, onFinish, renderDone }: {
 
   const pct = (100 * doneGraded) / totalGraded;
   const props = { setEvaluate, locked: !!feedback, onDone: selfDone } as const;
-  const selfContinue = step.kind === "intro" || step.kind === "pattern" || step.kind === "structure" || step.kind === "read";
+  const selfContinue = step.kind === "intro" || step.kind === "pattern" || step.kind === "structure" || step.kind === "read" || step.kind === "breakdown";
 
   return (
     <div className="flex min-h-dvh flex-col bg-cream">
@@ -139,6 +139,7 @@ export function LessonPlayer({ steps: initial, mode, onFinish, renderDone }: {
         {step.kind === "build" && <BuildEx step={step} {...props} />}
         {step.kind === "meaning" && <MeaningEx step={step} {...props} />}
         {step.kind === "structure" && <StructureEx step={step} {...props} />}
+        {step.kind === "breakdown" && <BreakdownEx step={step} {...props} />}
         {step.kind === "arrange" && <ArrangeEx step={step} {...props} />}
         {step.kind === "read" && <ReadEx step={step} {...props} />}
       </div>

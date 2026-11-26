@@ -7,7 +7,7 @@ import { textById } from "@/lib/course";
 import { useProgress } from "@/lib/store";
 import { textUnderstanding } from "@/lib/stats";
 import { playUrls } from "@/lib/audio";
-import { verseAudioUrl, wordAudioUrl } from "@/lib/course";
+import { verseAudioUrl } from "@/lib/course";
 import { useT } from "@/lib/i18n";
 import { ArabicLine } from "@/components/ArabicLine";
 import { Emoji, Ring } from "@/components/ui";
@@ -21,7 +21,8 @@ export default function ReadPage() {
   if (!text) return <p>Not found</p>;
   const und = textUnderstanding(p, text.id);
   const playAll = () =>
-    playUrls(text.lines.flatMap((l) => (l.verseAudio ? [verseAudioUrl(l.verseAudio)] : l.tokens.filter((t) => t.audio).map((t) => wordAudioUrl(t.audio!)))));
+    playUrls(text.lines.filter((l) => l.verseAudio).map((l) => verseAudioUrl(l.verseAudio!)));
+  const hasRecitation = text.lines.some((l) => l.verseAudio);
   return (
     <div>
       <Link href="/learn" className="mb-3 inline-flex items-center gap-1 font-bold text-muted"><ArrowLeft size={18} /> {lang === "bn" ? "ফিরে যান" : "Back"}</Link>
@@ -37,7 +38,7 @@ export default function ReadPage() {
             <span className="text-sm font-black">{Math.round(und)}%</span>
           </Ring>
         </div>
-        <button onClick={playAll} className="btn btn-gold mt-4 w-full py-2.5"><Volume2 size={18} /> {lang === "bn" ? "শুনুন" : "Listen"}</button>
+        {hasRecitation && <button onClick={playAll} className="btn btn-gold mt-4 w-full py-2.5"><Volume2 size={18} /> {lang === "bn" ? "তিলাওয়াত শুনুন" : "Listen to the recitation"}</button>}
       </section>
       <p className={`mt-4 px-1 text-sm text-muted ${lang === "bn" ? "bn" : ""}`}>
         {lang === "bn" ? "যেকোনো শব্দে ট্যাপ করুন। সবুজ = আপনি জানেন।" : "Tap any word. Green = a word you know."}

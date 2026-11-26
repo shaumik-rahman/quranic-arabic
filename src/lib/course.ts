@@ -5,7 +5,7 @@ export type Lang = "en" | "bn";
 
 export interface FamilyMember { key: string; ar: string; count: number; ex: string; exIp?: string | null; gloss: string; ref: string; self: boolean }
 export interface Word {
-  key: string; ar: string; en: string; bn: string; emoji: string;
+  key: string; pos: string; ar: string; en: string; bn: string; emoji: string;
   cog: { en?: string; bn?: string; hi?: string }; tip: string;
   lemma: string; root: string; rootSpaced: string; count: number; rank: number | null;
   audio: string | null; family: FamilyMember[];
@@ -18,7 +18,7 @@ export interface Line {
 export interface Structure {
   id: string; en: string; bn: string; emoji: string;
   shape: { ar: string; en: string; bn: string; role: string }[];
-  expl_en: string; expl_bn: string; quran: Line[]; everyday: Line[];
+  expl_en: string; expl_bn: string; notes: { en: string; bn: string }[]; quran: Line[]; everyday: Line[];
   chunk: Line | null; chunkVerses?: Line[]; chunkCount?: number;
 }
 export interface Text { id: string; en: string; bn: string; ar: string; emoji: string; desc_en: string; desc_bn: string; lines: Line[] }
@@ -30,7 +30,8 @@ export interface Unit {
 }
 export interface Pattern {
   id: string; ar: string; en: string; bn: string; emoji: string; expl_en: string; expl_bn: string;
-  examples: { ar: string; en: string; bn: string; audio: string | null }[];
+  more_en?: string; more_bn?: string;
+  examples: { ar: string; ip?: string | null; en: string; bn: string; key?: string; audio: string | null }[];
 }
 export interface Course { totalTokens: number; words: Record<string, Word>; patterns: Record<string, Pattern>; texts: Text[]; units: Unit[] }
 

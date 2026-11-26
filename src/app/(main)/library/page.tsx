@@ -7,7 +7,6 @@ import { useProgress } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
 import { strengthLevel } from "@/lib/srs";
 import { useT } from "@/lib/i18n";
-import { playWord } from "@/lib/audio";
 import { Emoji, StrengthDots } from "@/components/ui";
 import { useWordSheet } from "@/components/WordSheet";
 
@@ -107,12 +106,13 @@ export default function LibraryPage() {
                     <StrengthDots level={strengthLevel(p.items["p:" + id])} />
                   </div>
                   <p className={`mt-2 text-sm text-ink/80 ${lang === "bn" ? "bn" : ""}`}>{A(lang === "bn" ? pt.expl_bn : pt.expl_en)}</p>
+                  {(pt.more_en || pt.more_bn) && <p className={`mt-2 text-sm leading-relaxed text-ink/70 ${lang === "bn" ? "bn" : ""}`}>{A(lang === "bn" ? pt.more_bn : pt.more_en)}</p>}
                   <div className="mt-2 flex flex-wrap gap-2" dir="rtl">
                     {pt.examples.map((e, i) => (
-                      <button key={i} onClick={() => playWord(e.audio)} className="rounded-xl bg-sand px-2 py-1 text-center">
+                      <div key={i} className="rounded-xl bg-sand px-2 py-1 text-center">
                         <span className="ar block text-xl">{A(e.ar).split(" ")[0]}</span>
                         <span className={`block text-xs text-muted ${lang === "bn" ? "bn" : ""}`} dir="ltr">{lang === "bn" ? e.bn : e.en}</span>
-                      </button>
+                      </div>
                     ))}
                   </div>
                 </div>

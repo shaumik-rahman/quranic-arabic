@@ -265,6 +265,7 @@ for u in T.UNITS:
         structures.append(dict(id=st['id'], en=st['en'], bn=st['bn'], emoji=st['emoji'],
                                shape=[dict(ar=a, en=e, bn=b, role=r) for (a, e, b, r) in st['shape']],
                                expl_en=st['expl_en'], expl_bn=st['expl_bn'],
+                               notes=[dict(en=a, bn=b) for (a, b) in T.STRUCTURE_NOTES.get(st['id'], [])],
                                quran=q_lines, everyday=ev_lines,
                                chunk=build_seg(st['chunk']) if st.get('chunk') else None))
         parts = [st_words] if len(st_words) <= 5 else [st_words[:4], st_words[4:]]
@@ -315,6 +316,19 @@ for u in units_out:
                 first_tok.setdefault(tk['key'], tk)
                 if first_tok[tk['key']]['audio'] is None and tk['audio']: first_tok[tk['key']] = tk
 
+def pos_of(sg):
+    tags = sg['f'].get('_tags', [])
+    if 'PRON' in tags and 'LEM' not in sg['f']: return 'pron'
+    if sg['pos'] == 'V': return 'verb'
+    if sg['pos'] == 'P': return 'particle'
+    for t, n in (('DEM', 'dem'), ('REL', 'rel'), ('PN', 'name'), ('ADJ', 'adj'), ('ACT_PCPL', 'adj'), ('PASS_PCPL', 'adj'), ('PRON', 'pron')):
+        if t in tags: return n
+    return 'noun'
+POS = {}
+for loc, segs in words.items():
+    k = tok_key[loc]
+    if k not in POS: POS[k] = pos_of(stem(segs))
+POS.update({'X:hayya': 'particle', 'X:hamida': 'verb', 'X:falah': 'noun'})
 by_root = collections.defaultdict(list)
 for k, c in cnt.items():
     r = root_of.get(k)
@@ -335,7 +349,8 @@ for k in all_keys:
         problems.append('no content for word ' + k); c = dict(ar=lemma_ar(k), en='?', bn='?', emoji='', cog={}, tip='', root=None)
     root = c.get('root') or root_of.get(k, '')
     ft = first_tok.get(k, {})
-    words_out[k] = dict(key=k, ar=c['ar'], en=c['en'], bn=c['bn'], emoji=c['emoji'], cog=c['cog'], tip=c['tip'],
+    pos = POS.get(k) or c.get('pos') or 'noun'
+    words_out[k] = dict(key=k, pos=pos, ar=c['ar'], en=c['en'], bn=c['bn'], emoji=c['emoji'], cog=c['cog'], tip=c['tip'],
                         lemma=lemma_ar(k) if not k.startswith('X:') else c['ar'], root=root,
                         rootSpaced=' '.join(root), count=cnt.get(k, 0), rank=rank.get(k),
                         audio=ft.get('audio') or (audio_of(first_loc[k]) if k in first_loc else None), family=family(root, k) if root else [])
@@ -348,10 +363,11 @@ for u in units_out:
         for tk in ln['tokens']:
             for p in tk['pats']:
                 if len(pat_ex[p]) < 4 and all(e['ar'] != tk['ar'] for e in pat_ex[p]):
-                    pat_ex[p].append(dict(ar=tk['ar'], en=tk['en'], bn=tk['bn'], audio=tk['audio']))
+                    pat_ex[p].append(dict(ar=tk['ar'], ip=tk.get('ip'), en=tk['en'], bn=tk['bn'], key=tk['key'], audio=None))
 patterns_out = {}
 for p in T.PATTERNS:
-    patterns_out[p['id']] = dict(p, examples=pat_ex.get(p['id'], []))
+    more = T.PATTERN_MORE.get(p['id'], ('', ''))
+    patterns_out[p['id']] = dict(p, examples=pat_ex.get(p['id'], []), more_en=more[0], more_bn=more[1])
 used_pats = set(p for u in units_out for p in u['newPatterns'])
 for p in used_pats:
     if p not in patterns_out: problems.append('pattern without card: ' + p)
@@ -371,10 +387,14 @@ def ip_for(s):
         converted[s] = to_indopak(s, standalone=not s.startswith('ـ'))
         return converted[s]
     return None
-for t in texts_out:
-    for ln in t['lines']:
-        for tk in ln['tokens']:
-            if tk.get('ip'): AR2IP[tk['ar']] = tk['ip']
+all_lines = [ln for t in texts_out for ln in t['lines']]
+for u in units_out:
+    all_lines += u['lines'] + u['newVerses']
+    for st in u['structures']:
+        all_lines += st['quran'] + st['everyday'] + st.get('chunkVerses', []) + ([st['chunk']] if st.get('chunk') else [])
+for ln in all_lines:
+    for tk in ln['tokens']:
+        if tk.get('ip') and tk['ar'] not in AR2IP: AR2IP[tk['ar']] = tk['ip']
 missing_ip = []
 def need(s):
     for part in s.split(' / '):
@@ -388,7 +408,9 @@ for p in patterns_out.values():
     need(p['ar'])
     for e in p['examples']: need(e['ar'])
 ARAB_RUN = re.compile(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+(?:\s+[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+)*')
-for txt in [w['tip'] for w in words_out.values()] + [p['expl_en'] for p in T.PATTERNS] + [p['expl_bn'] for p in T.PATTERNS]:
+extra_txt = [x for pair in T.PATTERN_MORE.values() for x in pair] + [x for notes in T.STRUCTURE_NOTES.values() for pair in notes for x in pair]
+extra_txt += [x for st in T.STRUCTURES for x in (st['expl_en'], st['expl_bn'])]
+for txt in [w['tip'] for w in words_out.values()] + [p['expl_en'] for p in T.PATTERNS] + [p['expl_bn'] for p in T.PATTERNS] + extra_txt:
     for run in ARAB_RUN.findall(txt):
         for part in run.split():
             if len(part) > 1 and part not in AR2IP:

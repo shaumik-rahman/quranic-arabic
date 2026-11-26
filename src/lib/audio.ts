@@ -98,21 +98,5 @@ export function sfx(kind: "correct" | "wrong" | "complete") {
   } catch {}
 }
 
-/** Everyday (non-Quran) sentences have no recitation audio: use the device's Arabic voice if it has one. */
-export function speak(text: string, fallbackWordIds: (string | null)[] = []) {
-  if (typeof window === "undefined") return;
-  const synth = window.speechSynthesis;
-  const voice = synth?.getVoices().find((v) => v.lang.toLowerCase().startsWith("ar"));
-  if (!synth || !voice) { playWordSequence(fallbackWordIds); return; }
-  stopAudio();
-  synth.cancel();
-  const u = new SpeechSynthesisUtterance(text.replace(/[ۖ-ۭ]/g, ""));
-  u.voice = voice;
-  u.lang = voice.lang;
-  u.rate = 0.8;
-  synth.speak(u);
-}
-export const playLine = (line: { kind: string; verseAudio: string | null; ar: string; tokens: { audio: string | null }[] }) =>
-  line.verseAudio ? playVerse(line.verseAudio)
-    : line.kind === "everyday" ? speak(line.ar, line.tokens.map((t) => t.audio))
-    : playWordSequence(line.tokens.map((t) => t.audio));
+/** Only complete verses are played (Mishary Alafasy). Word clips were cut from continuous recitation and sounded wrong. */
+export const playLine = (line: { verseAudio: string | null }) => { if (line.verseAudio) playVerse(line.verseAudio); };

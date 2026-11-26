@@ -28,7 +28,7 @@ export function ArabicLine({ line, size = "text-3xl", showGloss = false, highlig
   return (
     <div>
       <div className="flex items-start gap-2">
-        <button onClick={play} className="mt-3 shrink-0 rounded-full bg-sky-light p-2 text-sky" aria-label="Play"><Volume2 size={18} /></button>
+        {line.verseAudio && <button onClick={play} className="mt-3 shrink-0 rounded-full bg-sky-light p-2 text-sky" aria-label="Play recitation"><Volume2 size={18} /></button>}
         <div dir="rtl" className="flex flex-1 flex-wrap gap-x-2 gap-y-1">
           {line.tokens.map((t, i) => {
             const known = highlightKnown && !!items[t.key];

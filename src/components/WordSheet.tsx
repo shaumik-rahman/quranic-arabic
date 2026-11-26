@@ -1,9 +1,8 @@
 "use client";
 import { useScript } from "@/lib/script";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { ChevronDown, ChevronUp, Volume2, X } from "lucide-react";
+import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { PATTERNS, TOTAL_TOKENS, WORDS, meaning, type Token } from "@/lib/course";
-import { playWord } from "@/lib/audio";
 import { useProgress } from "@/lib/store";
 import { strengthLevel } from "@/lib/srs";
 import { useT } from "@/lib/i18n";
@@ -28,7 +27,7 @@ export const tokenPayload = (t: Token): SheetPayload => ({ ar: t.ar, ip: t.ip, e
 
 export function WordSheetProvider({ children }: { children: React.ReactNode }) {
   const [p, setP] = useState<SheetPayload | null>(null);
-  const open = useCallback((x: SheetPayload) => { setP(x); if (x.audio) playWord(x.audio); }, []);
+  const open = useCallback((x: SheetPayload) => { setP(x); }, []);
   return (
     <Ctx.Provider value={open}>
       {children}
@@ -71,9 +70,6 @@ function Sheet({ p, onClose }: { p: SheetPayload; onClose: () => void }) {
           </div>
           <div className="flex flex-col gap-2">
             <button onClick={onClose} className="rounded-full p-2 text-muted hover:bg-sand" aria-label="Close"><X size={20} /></button>
-            {(p.audio || w?.audio) && (
-              <button onClick={() => playWord(p.audio || w?.audio)} className="rounded-full bg-sky-light p-2 text-sky" aria-label={t("listen")}><Volume2 size={20} /></button>
-            )}
           </div>
         </div>
 
