@@ -19,6 +19,7 @@ def convert(s, standalone=False):
     s = s.replace('ۡ', SUKUN)
     # Allah / lillah
     s = re.sub('ٱلل[' + MARKS + ']*ه', 'اللّٰه', s)
+    if standalone and s.startswith('اللّٰه'): s = 'اَ' + s[1:]   # Allah at the start of a phrase: اَللّٰهُ
     s = re.sub('لِل[' + MARKS + ']*ه', 'لِلّٰه', s)
     # tanween: iqlab small meem and Tanzil "open" tanween
     s = s.replace(FATHA + 'ۢ', 'ً').replace(DAMMA + 'ۢ', 'ٌ').replace(KASRA + 'ۭ', 'ٍ')

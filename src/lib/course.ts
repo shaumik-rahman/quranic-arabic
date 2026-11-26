@@ -15,11 +15,20 @@ export interface Line {
   id: string; ref: string; kind: "quran" | "hand" | "everyday"; verseAudio: string | null;
   en: string; bn: string; tokens: Token[]; ar: string; note_en?: string; note_bn?: string; newVerse?: boolean;
 }
+export interface TeachEx { ar: string; en: string; bn: string }
+/** one swipeable teaching page */
+export interface TeachPage { t_en: string; t_bn: string; x_en: string; x_bn: string; ex: TeachEx[]; vs: TeachEx[] }
+/** an understanding check; options[0] is the right answer */
+export interface Check {
+  q_en: string; q_bn: string; ar: string | null; ar_opts: boolean;
+  options: (string | { en: string; bn: string })[]; why_en: string; why_bn: string;
+}
 export interface Structure {
   id: string; en: string; bn: string; emoji: string;
   shape: { ar: string; en: string; bn: string; role: string }[];
   expl_en: string; expl_bn: string; notes: { en: string; bn: string }[]; quran: Line[]; everyday: Line[];
   chunk: Line | null; chunkVerses?: Line[]; chunkCount?: number;
+  pages: TeachPage[]; checks: Check[];
 }
 export interface Text { id: string; en: string; bn: string; ar: string; emoji: string; desc_en: string; desc_bn: string; lines: Line[] }
 export interface Lesson { id: string; type: "learn" | "final" | "structure" | "verses"; words: string[]; patterns: string[]; structure?: string; part?: number; parts?: number }
@@ -30,7 +39,7 @@ export interface Unit {
 }
 export interface Pattern {
   id: string; ar: string; en: string; bn: string; emoji: string; expl_en: string; expl_bn: string;
-  more_en?: string; more_bn?: string;
+  more_en?: string; more_bn?: string; pages: TeachPage[]; checks: Check[];
   examples: { ar: string; ip?: string | null; en: string; bn: string; key?: string; audio: string | null }[];
 }
 export interface Course { totalTokens: number; words: Record<string, Word>; patterns: Record<string, Pattern>; texts: Text[]; units: Unit[] }
@@ -93,4 +102,11 @@ export function linesWithWord(key: string): { line: Line; index: number }[] {
     if (i >= 0) out.push({ line, index: i });
   }
   return out;
+}
+
+/** teaching material for "p:<pattern>" or "s:<structure>" */
+export function teachOf(ref: string): { pages: TeachPage[]; checks: Check[] } {
+  const [kind, id] = [ref.slice(0, 1), ref.slice(2)];
+  const src = kind === "p" ? PATTERNS[id] : STRUCTURES[id];
+  return { pages: src?.pages ?? [], checks: src?.checks ?? [] };
 }

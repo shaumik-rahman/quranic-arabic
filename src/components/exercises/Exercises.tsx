@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import { PATTERNS, STRUCTURES, WORDS, linesWithWord, meaning, type Line, type Token } from "@/lib/course";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { PATTERNS, STRUCTURES, WORDS, linesWithWord, meaning, teachOf, type Line, type TeachPage, type Token } from "@/lib/course";
 import { lineById, type Step } from "@/lib/exercises";
 import { playLine, playVerse, sfx } from "@/lib/audio";
 import { useT } from "@/lib/i18n";
@@ -10,12 +10,14 @@ import { Volume2 } from "lucide-react";
 import { Emoji } from "../ui";
 import { ArabicLine } from "../ArabicLine";
 
-export type Evaluate = () => { correct: boolean; answer: React.ReactNode };
+export type Evaluate = () => { correct: boolean; answer: React.ReactNode; why?: React.ReactNode };
+export interface Pager { at: number; total: number; next: () => void }
 export interface ExProps<K extends Step["kind"]> {
   step: Extract<Step, { kind: K }>;
   setEvaluate: (fn: Evaluate | null) => void; // graded steps: set when the user has a selection
   locked: boolean; // after checking
   onDone: (correct: boolean) => void; // for self-completing steps (match)
+  setPager?: (p: Pager | null) => void; // steps made of swipeable pages
 }
 
 const firstForm = (ar: string) => ar.split(" / ")[0];
@@ -61,18 +63,125 @@ function PatternChips({ pats }: { pats: string[] }) {
   const list = pats.filter((p) => PATTERNS[p]);
   if (!list.length) return null;
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-2">
       {list.map((p) => (
-        <span key={p} className={`rounded-full bg-white px-2 py-0.5 text-sm font-bold ${lang === "bn" ? "bn" : ""}`}>
-          <span className="ar text-lg text-emerald">{A(PATTERNS[p].ar)}</span> = {lang === "bn" ? PATTERNS[p].bn : PATTERNS[p].en}
+        <span key={p} className={`rounded-full bg-white px-3 py-1 text-[16px] font-bold ${lang === "bn" ? "bn" : ""}`}>
+          <span className="ar text-2xl text-emerald">{A(PATTERNS[p].ar)}</span> = {lang === "bn" ? PATTERNS[p].bn : PATTERNS[p].en}
         </span>
       ))}
     </div>
   );
 }
 
+// ---------------- teaching building blocks ----------------
+const AR_RUN = /[؀-ۿݐ-ݿࢠ-ࣿ]+(?:[  ]+[؀-ۿݐ-ݿࢠ-ࣿ]+)*/g;
+/** Text with Arabic inside it: the Arabic is shown in the Quran font, large enough to read every haraka. */
+export function Rich({ text, className = "" }: { text: string; className?: string }) {
+  const { A } = useScript();
+  const parts: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(AR_RUN)) {
+    if (m.index! > last) parts.push(text.slice(last, m.index));
+    parts.push(<bdi key={m.index} className={`ar ar-in ${className}`}>{A(m[0])}</bdi>);
+    last = m.index! + m[0].length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <>{parts}</>;
+}
+
+/** Swipeable pages (swipe, tap the dots, or the footer's "Next" button via setPager). */
+function Pages({ pages, setPager }: { pages: React.ReactNode[]; setPager?: (p: Pager | null) => void }) {
+  const [at, setAt] = useState(0);
+  const [h, setH] = useState<number | undefined>();
+  const refs = useRef<(HTMLDivElement | null)[]>([]);
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const total = pages.length;
+  const go = (i: number) => setAt(Math.max(0, Math.min(total - 1, i)));
+  useEffect(() => {
+    setPager?.({ at, total, next: () => go(at + 1) });
+    if (at > 0) window.scrollTo({ top: 0, behavior: "smooth" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [at, total]);
+  useEffect(() => () => setPager?.(null), [setPager]);
+  // the frame is as tall as the page being shown
+  useEffect(() => {
+    const el = refs.current[at];
+    if (!el) return;
+    const ro = new ResizeObserver(() => setH(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [at]);
+  return (
+    <div>
+      {total > 1 && (
+        <div className="mb-3 flex items-center justify-center gap-1.5" data-testid="page-dots">
+          {pages.map((_, i) => (
+            <button key={i} onClick={() => go(i)} aria-label={`page ${i + 1}`}
+              className={`h-2.5 rounded-full transition-all ${i === at ? "w-7 bg-emerald" : "w-2.5 bg-line"}`} />
+          ))}
+        </div>
+      )}
+      <div className="overflow-hidden transition-[height] duration-300" style={{ height: h }}
+        onTouchStart={(e) => (touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
+        onTouchEnd={(e) => {
+          const t0 = touch.current; touch.current = null;
+          if (!t0) return;
+          const dx = e.changedTouches[0].clientX - t0.x, dy = e.changedTouches[0].clientY - t0.y;
+          if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(at + (dx < 0 ? 1 : -1));
+        }}>
+        <div className="flex items-start transition-transform duration-300 ease-out" style={{ transform: `translateX(-${at * 100}%)` }}>
+          {pages.map((p, i) => (
+            <div key={i} ref={(el) => { refs.current[i] = el; }} aria-hidden={i !== at} className="w-full shrink-0 px-1 pb-2">{p}</div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Arabic (big) next to / above its meaning */
+function ExRow({ ar, text }: { ar: string; text: string }) {
+  const { lang } = useT();
+  const { C } = useForm();
+  const long = ar.replace(/[^ء-يٱ-ۓ]/g, "").length > 9;
+  return (
+    <div className={`py-3 ${long ? "" : "flex items-center gap-4"}`}>
+      <div dir="rtl" className={`ar text-3xl text-ink ${long ? "text-right" : "min-w-[38%] text-right"}`}>{C(ar)}</div>
+      <div className={`text-[17px] font-semibold leading-snug ${long ? "mt-1" : "flex-1"} ${lang === "bn" ? "bn" : ""}`}><Rich text={text} /></div>
+    </div>
+  );
+}
+
+export function TeachCard({ page }: { page: TeachPage }) {
+  const { lang } = useT();
+  const { C } = useForm();
+  const bn = lang === "bn" ? "bn" : "";
+  const tx = (x: { en: string; bn: string }) => (lang === "bn" ? x.bn : x.en);
+  return (
+    <div className="card p-5">
+      <h3 className={`text-[22px] font-black leading-tight ${bn}`}><Rich text={lang === "bn" ? page.t_bn : page.t_en} /></h3>
+      <p className={`mt-3 text-[18px] leading-relaxed text-ink/90 ${bn}`}><Rich text={lang === "bn" ? page.x_bn : page.x_en} /></p>
+      {page.vs.length > 0 && (
+        <div className={`mt-4 grid gap-2 ${page.vs.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+          {page.vs.map((v, i) => (
+            <div key={i} className="flex flex-col items-center justify-center rounded-2xl border-2 border-line bg-sand/60 px-2 py-3 text-center">
+              <div className={`ar ${page.vs.length === 3 || v.ar.length > 14 ? "text-3xl" : "text-4xl"} text-emerald-dark`}>{C(v.ar)}</div>
+              <div className={`mt-1 text-[16px] font-bold leading-snug ${bn}`}><Rich text={tx(v)} /></div>
+            </div>
+          ))}
+        </div>
+      )}
+      {page.ex.length > 0 && (
+        <div className="mt-3 divide-y-2 divide-line">
+          {page.ex.map((e, i) => <ExRow key={i} ar={e.ar} text={tx(e)} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------------- New word ----------------
-export function IntroEx({ step }: ExProps<"intro">) {
+export function IntroEx({ step, setPager }: ExProps<"intro">) {
   const { t, lang } = useT();
   const { F, A, T } = useForm();
   const w = WORDS[step.word];
@@ -87,106 +196,111 @@ export function IntroEx({ step }: ExProps<"intro">) {
   useEffect(() => { useProgress.getState().learn([step.word]); }, [step.word]);
   const cogs = Object.entries(w.cog);
   const pos = POS_LABEL[w.pos];
-  return (
-    <div className="animate-pop space-y-3">
+  const understand = !!(firstTok?.pats.length || w.tip || w.root || w.count > 0 || family.length);
+
+  const page1 = (
+    <div className="space-y-3">
       <Badge color="bg-plum/15 text-plum">✨ {t("newWord")}</Badge>
       <div className="card flex flex-col items-center p-5 text-center">
         <Emoji e={w.emoji} className="text-6xl" />
         <div className="ar mt-2 text-5xl text-ink">{F(w.ar)}</div>
-        {w.ar.includes(" / ") && <div className="ar text-2xl text-muted">{A(w.ar.split(" / ")[1])}</div>}
-        <div className={`mt-1 text-2xl font-black text-emerald ${bn}`}>{meaning(w, lang)}</div>
-        {pos && <div className={`mt-1 text-xs font-bold uppercase tracking-wider text-muted ${bn}`}>{lang === "bn" ? pos[1] : pos[0]}</div>}
+        {w.ar.includes(" / ") && <div className="ar text-3xl text-muted">{A(w.ar.split(" / ")[1])}</div>}
+        <div className={`mt-1 text-[26px] font-black text-emerald ${bn}`}>{meaning(w, lang)}</div>
+        {pos && <div className={`mt-1 text-sm font-bold uppercase tracking-wider text-muted ${bn}`}>{lang === "bn" ? pos[1] : pos[0]}</div>}
       </div>
-
-      {(firstTok?.pats.length || w.tip || w.root || w.count > 0) && (
-        <Box title={lang === "bn" ? "বুঝে নিন" : "Understand it"} tone="sky">
-          <div className={`space-y-2 text-[15px] leading-relaxed ${bn}`}>
-            {firstTok && firstTok.pats.length > 0 && (
-              <div>
-                <div className="mb-1">
-                  <span className="ar text-xl">{T(firstTok, true)}</span>{" "}
-                  {lang === "bn" ? "শব্দে আছে:" : "is built with:"}
-                </div>
-                <PatternChips pats={firstTok.pats} />
-              </div>
-            )}
-            {w.tip && <div>💡 {A(w.tip)}</div>}
-            {w.count > 0 && (
-              <div>
-                📖 {lang === "bn" ? `কুরআনে ${w.count} বার এসেছে।` : `Appears ${w.count} times in the Quran.`}
-                {w.root && <> {lang === "bn" ? "মূল অক্ষর" : "Root letters"} <bdi className="ar text-lg text-emerald">{w.rootSpaced}</bdi>.</>}
-              </div>
-            )}
-            {family.length > 0 && (
-              <div>
-                <div className="mb-1">{lang === "bn" ? "একই পরিবারের শব্দ:" : "Same family:"}</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {family.map((f) => (
-                    <span key={f.key} className="rounded-xl bg-white px-2 py-0.5 text-sm">
-                      <span className="ar text-lg">{T({ ar: f.ex, ip: f.exIp }, true).replace(CLEAN, "")}</span>{" "}
-                      <span className={bn}>{WORDS[f.key] ? meaning(WORDS[f.key], lang) : f.gloss}</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </Box>
-      )}
-
       {cogs.length > 0 && (
         <Box title={t("related")} tone="gold">
           {cogs.map(([l, v]) => (
-            <div key={l} className="text-sm"><span className="mr-2 inline-block w-20 font-bold text-gold-dark">{l === "en" ? "English" : l === "bn" ? "বাংলা" : "Hindi/Urdu"}</span><span className={l === "bn" ? "bn" : ""}>{v}</span></div>
+            <div key={l} className="py-0.5 text-[17px]"><span className="mr-2 inline-block w-24 font-bold text-gold-dark">{l === "en" ? "English" : l === "bn" ? "বাংলা" : "Hindi/Urdu"}</span><span className={l === "bn" ? "bn" : ""}>{v}</span></div>
           ))}
         </Box>
       )}
-
+    </div>
+  );
+  const page2 = (
+    <div className="space-y-3">
+      <Badge color="bg-sky-light text-sky">💡 {lang === "bn" ? "বুঝে নিন" : "Understand it"}</Badge>
+      {understand && (
+        <div className={`card space-y-4 p-5 text-[17px] leading-relaxed ${bn}`}>
+          {firstTok && firstTok.pats.length > 0 && (
+            <div>
+              <div className="mb-2"><span className="ar text-3xl">{T(firstTok, true)}</span> {lang === "bn" ? "শব্দে আছে:" : "is built with:"}</div>
+              <PatternChips pats={firstTok.pats} />
+            </div>
+          )}
+          {w.tip && <div><Rich text={w.tip} /></div>}
+          {w.count > 0 && (
+            <div>
+              📖 {lang === "bn" ? `কুরআনে ${w.count} বার এসেছে।` : `Appears ${w.count} times in the Quran.`}
+              {w.root && <> {lang === "bn" ? "মূল অক্ষর" : "Root letters"} <bdi className="ar ar-in text-emerald">{w.rootSpaced}</bdi>.</>}
+            </div>
+          )}
+          {family.length > 0 && (
+            <div>
+              <div className="mb-1 font-bold">{lang === "bn" ? "একই পরিবারের শব্দ" : "Same family"}</div>
+              <div className="divide-y-2 divide-line">
+                {family.map((f) => <ExRow key={f.key} ar={T({ ar: f.ex, ip: f.exIp }, true).replace(CLEAN, "")} text={WORDS[f.key] ? meaning(WORDS[f.key], lang) : f.gloss} />)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {examples.length > 0 && (
         <Box title={lang === "bn" ? "উদাহরণ" : "Examples"}>
           <div className="space-y-3">
-            {examples.map(({ line }) => <ArabicLine key={line.id} line={line} size="text-2xl" highlightKey={step.word} />)}
+            {examples.map(({ line }) => <ArabicLine key={line.id} line={line} size="text-3xl" highlightKey={step.word} />)}
           </div>
         </Box>
       )}
     </div>
   );
+  return <div className="animate-pop"><Pages pages={understand || examples.length ? [page1, page2] : [page1]} setPager={setPager} /></div>;
 }
 
 // ---------------- Pattern (a pinch of grammar) ----------------
-export function PatternEx({ step }: ExProps<"pattern">) {
+export function PatternEx({ step, setPager }: ExProps<"pattern">) {
   const { t, lang } = useT();
   const { A, F, T } = useForm();
   const p = PATTERNS[step.pattern];
   const bn = lang === "bn" ? "bn" : "";
   useEffect(() => { useProgress.getState().learn(["p:" + step.pattern]); }, [step.pattern]);
-  return (
-    <div className="animate-pop space-y-3">
+  const hero = (
+    <div className="space-y-3">
       <Badge color="bg-gold-light text-gold-dark">🧂 {t("newPattern")}</Badge>
-      <div className="card p-5 text-center">
-        <div className="ar text-6xl text-emerald">{A(p.ar)}</div>
-        <div className={`mt-1 text-2xl font-black ${bn}`}>{p.emoji} {lang === "bn" ? p.bn : p.en}</div>
-        <p className={`mt-3 text-left text-[15px] leading-relaxed text-ink/85 ${bn}`}>{A(lang === "bn" ? p.expl_bn : p.expl_en)}</p>
-        {(p.more_en || p.more_bn) && <p className={`mt-2 text-left text-[15px] leading-relaxed text-ink/70 ${bn}`}>{A(lang === "bn" ? p.more_bn : p.more_en)}</p>}
-      </div>
-      <Box title={lang === "bn" ? "যা আপনি পড়েন তাতে" : "In what you recite"}>
-        <div className="divide-y-2 divide-line">
-          {p.examples.slice(0, 4).map((e, i) => {
-            const base = e.key ? WORDS[e.key] : undefined;
-            return (
-              <div key={i} className="flex items-center gap-3 py-2">
-                <span className="ar min-w-20 text-right text-2xl">{T({ ar: e.ar, ip: e.ip }, true).replace(CLEAN, "")}</span>
-                <div className={`flex-1 text-sm ${bn}`}>
-                  <div className="font-bold">{lang === "bn" ? e.bn : e.en}</div>
-                  {base && <div className="text-muted"><span className="ar text-base">{F(base.ar)}</span> ({meaning(base, lang)}) + <span className="ar text-base text-emerald">{A(p.ar)}</span></div>}
-                </div>
-              </div>
-            );
-          })}
+      <div className="card p-6 text-center">
+        <div dir="rtl" className="flex flex-wrap items-center justify-center gap-x-6">
+          {p.ar.split(" / ").map((part, i) => (
+            // a lone ending (ـٌ) gets a longer line to sit on, so the haraka is easy to see
+            <span key={i} className="ar text-6xl text-emerald">{A(part).replace(/^ـ(?=[\u064B-\u0652])/, "ـــ")}</span>
+          ))}
         </div>
-      </Box>
+        <div className={`mt-2 text-[26px] font-black ${bn}`}>{p.emoji} {lang === "bn" ? p.bn : p.en}</div>
+        <p className={`mt-4 text-left text-[18px] leading-relaxed text-ink/90 ${bn}`}><Rich text={lang === "bn" ? p.expl_bn : p.expl_en} /></p>
+      </div>
     </div>
   );
+  const pages = (p.pages?.length ? p.pages : p.more_en ? [{ t_en: p.en, t_bn: p.bn, x_en: p.more_en, x_bn: p.more_bn ?? "", ex: [], vs: [] }] : [])
+    .map((pg, i) => <TeachCard key={i} page={pg} />);
+  const recite = p.examples.length > 0 && (
+    <div className="card p-5">
+      <h3 className={`text-[22px] font-black ${bn}`}>{lang === "bn" ? "যা আপনি পড়েন তাতে" : "In what you recite"}</h3>
+      <div className="mt-2 divide-y-2 divide-line">
+        {p.examples.slice(0, 4).map((e, i) => {
+          const base = e.key ? WORDS[e.key] : undefined;
+          return (
+            <div key={i} className="flex items-center gap-4 py-3">
+              <span className="ar min-w-[35%] text-right text-3xl">{T({ ar: e.ar, ip: e.ip }, true).replace(CLEAN, "")}</span>
+              <div className={`flex-1 text-[17px] leading-snug ${bn}`}>
+                <div className="font-bold">{lang === "bn" ? e.bn : e.en}</div>
+                {base && <div className="text-muted"><bdi className="ar ar-in">{F(base.ar)}</bdi> ({meaning(base, lang)}) + <bdi className="ar ar-in text-emerald">{A(p.ar)}</bdi></div>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+  return <div className="animate-pop"><Pages pages={[hero, ...pages, ...(recite ? [recite] : [])]} setPager={setPager} /></div>;
 }
 
 // ---------------- MCQ ----------------
@@ -262,7 +376,7 @@ export function PatternQEx({ step, setEvaluate, locked }: ExProps<"patternq">) {
     <div>
       <Title>{t("whatMeans")}</Title>
       <div className="ar mb-2 text-center text-5xl">{T(step.token, true)}</div>
-      <div className={`mb-5 text-center text-sm text-muted ${lang === "bn" ? "bn" : ""}`}>💡 <span className="ar text-lg text-emerald">{A(p.ar)}</span> = {lang === "bn" ? p.bn : p.en}</div>
+      <div className={`mb-5 text-center text-[17px] text-muted ${lang === "bn" ? "bn" : ""}`}>💡 <span className="ar text-2xl text-emerald">{A(p.ar)}</span> = {lang === "bn" ? p.bn : p.en}</div>
       <div className="flex flex-col gap-3">
         {step.options.map((o, i) => (
           <Option key={i} selected={sel === i} onClick={() => !locked && setSel(i)}
@@ -500,39 +614,79 @@ const ROLE_COLORS: Record<string, string> = {
   who: "bg-coral-light border-coral text-coral-dark", do: "bg-emerald-light border-emerald text-emerald-dark",
   inna: "bg-coral-light border-coral text-coral-dark",
 };
-export function StructureEx({ step }: ExProps<"structure">) {
+export function StructureEx({ step, setPager }: ExProps<"structure">) {
   const { t, lang } = useT();
   const { A } = useForm();
   const st = STRUCTURES[step.structure];
   const bn = lang === "bn" ? "bn" : "";
-  return (
-    <div className="animate-pop space-y-3">
+  const hero = (
+    <div className="space-y-3">
       <Badge color="bg-sky-light text-sky">🧩 {t("structure")}</Badge>
       <div className="card p-5">
-        <div className={`text-2xl font-black ${bn}`}>{st.emoji} {lang === "bn" ? st.bn : st.en}</div>
+        <div className={`text-[24px] font-black leading-tight ${bn}`}>{st.emoji} <Rich text={lang === "bn" ? st.bn : st.en} /></div>
         <div dir="rtl" className="mt-4 flex flex-wrap justify-center gap-2">
           {st.shape.map((c, i) => (
             <div key={i} className={`rounded-2xl border-2 px-3 py-1 text-center ${ROLE_COLORS[c.role] || "bg-sand border-line"}`}>
-              <div className="ar text-3xl text-ink">{A(c.ar).replace(CLEAN, "").replace(/\s+/g, " ").trim()}</div>
-              <div dir="ltr" className={`text-xs font-bold ${bn}`}>{lang === "bn" ? c.bn : c.en}</div>
+              <div className="ar text-4xl text-ink">{A(c.ar).replace(CLEAN, "").replace(/\s+/g, " ").trim()}</div>
+              <div dir="ltr" className={`text-sm font-bold ${bn}`}>{lang === "bn" ? c.bn : c.en}</div>
             </div>
           ))}
         </div>
-        <p className={`mt-4 text-[15px] leading-relaxed text-ink/85 ${bn}`}>{A(lang === "bn" ? st.expl_bn : st.expl_en)}</p>
+        <p className={`mt-4 text-[18px] leading-relaxed text-ink/90 ${bn}`}><Rich text={lang === "bn" ? st.expl_bn : st.expl_en} /></p>
       </div>
-      {st.notes?.length > 0 && (
-        <Box title={lang === "bn" ? "লক্ষ করুন" : "Notice"} tone="sky">
-          <ul className={`space-y-2 text-[15px] leading-relaxed ${bn}`}>
-            {st.notes.map((n, i) => <li key={i} className="flex gap-2"><span className="font-black text-sky">{i + 1}.</span><span>{A(lang === "bn" ? n.bn : n.en)}</span></li>)}
-          </ul>
-        </Box>
-      )}
-      <Box title={t("inYourText")}><ArabicLine line={st.quran[0]} size="text-2xl" /></Box>
+    </div>
+  );
+  const pages = st.pages?.length
+    ? st.pages.map((pg, i) => <TeachCard key={i} page={pg} />)
+    : st.notes.map((n, i) => <TeachCard key={i} page={{ t_en: `${i + 1}`, t_bn: `${i + 1}`, x_en: n.en, x_bn: n.bn, ex: [], vs: [] }} />);
+  const quran = (
+    <div className="space-y-3">
+      <Box title={t("inYourText")}><ArabicLine line={st.quran[0]} size="text-3xl" /></Box>
       {st.quran.length > 1 && (
         <Box title={t("inQuran")}>
-          <div className="space-y-3">{st.quran.slice(1).map((l) => <ArabicLine key={l.id} line={l} size="text-2xl" fadeUnknown />)}</div>
+          <div className="space-y-3">{st.quran.slice(1).map((l) => <ArabicLine key={l.id} line={l} size="text-3xl" fadeUnknown />)}</div>
         </Box>
       )}
+    </div>
+  );
+  return <div className="animate-pop"><Pages pages={[hero, ...pages, quran]} setPager={setPager} /></div>;
+}
+
+// ---------------- Check your understanding (a written question about the idea just taught) ----------------
+export function CheckEx({ step, setEvaluate, locked }: ExProps<"check">) {
+  const { t, lang } = useT();
+  const { C } = useForm();
+  const c = teachOf(step.ref).checks[step.n];
+  const bn = lang === "bn" ? "bn" : "";
+  const [sel, setSel] = useState<number | null>(null);
+  const [res, setRes] = useState<boolean | null>(null);
+  const label = (i: number) => {
+    const o = c.options[i];
+    return typeof o === "string" ? <span className="ar text-3xl">{C(o)}</span> : <span className={`text-[17px] font-bold leading-snug ${bn}`}><Rich text={lang === "bn" ? o.bn : o.en} /></span>;
+  };
+  useEffect(() => {
+    if (sel === null) return setEvaluate(null);
+    setEvaluate(() => {
+      const ok = sel === 0;
+      setRes(ok);
+      return { correct: ok, answer: label(0), why: <span className={bn}><Rich text={lang === "bn" ? c.why_bn : c.why_en} /></span> };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sel, lang]);
+  const state = (i: number) => (!locked || res === null ? null : i === 0 ? "right" : i === sel ? "wrong" : null);
+  return (
+    <div>
+      <Badge color="bg-emerald-light text-emerald-dark">🧠 {t("checkUnderstanding")}</Badge>
+      <h2 className={`mb-5 text-[22px] font-black leading-snug ${bn}`}><Rich text={lang === "bn" ? c.q_bn : c.q_en} className="text-emerald-dark" /></h2>
+      {c.ar && !(lang === "bn" ? c.q_bn : c.q_en).includes(c.ar) && <div className="card mb-5 p-4 text-center"><span className="ar text-5xl">{C(c.ar)}</span></div>}
+      <div className={c.ar_opts ? "grid grid-cols-2 gap-3" : "flex flex-col gap-3"}>
+        {step.order.map((i) => (
+          <Option key={i} selected={sel === i} state={state(i)} onClick={() => !locked && setSel(i)}
+            className={c.ar_opts ? "flex min-h-20 items-center justify-center text-center" : "text-left"}>
+            {label(i)}
+          </Option>
+        ))}
+      </div>
     </div>
   );
 }
@@ -548,11 +702,11 @@ export function BreakdownEx({ step }: ExProps<"breakdown">) {
   return (
     <div className="animate-pop space-y-3">
       <Badge color="bg-sky-light text-sky">🔍 {lang === "bn" ? "কীভাবে গঠিত দেখুন" : "See how it's built"}</Badge>
-      <div className={`text-lg font-black ${bn}`}>{st.emoji} {lang === "bn" ? st.bn : st.en}</div>
+      <div className={`text-[22px] font-black ${bn}`}>{st.emoji} <Rich text={lang === "bn" ? st.bn : st.en} /></div>
       {lines.map((l) => (
         <div key={l.id} className="card p-4">
           <ArabicLine line={l} size="text-3xl" showGloss showTranslation={false} />
-          <div className={`mt-2 rounded-xl bg-sand px-3 py-2 text-sm ${bn}`}>
+          <div className={`mt-2 space-y-1 rounded-xl bg-sand px-3 py-2.5 text-[17px] leading-snug ${bn}`}>
             <div><span className="font-bold text-muted">{lang === "bn" ? "শব্দে শব্দে:" : "Word for word:"}</span> {l.tokens.map(gl).join(" · ")}</div>
             <div><span className="font-bold text-emerald">{lang === "bn" ? "অর্থ:" : "Meaning:"}</span> {lang === "bn" ? l.bn : l.en}</div>
           </div>

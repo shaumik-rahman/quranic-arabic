@@ -1,4 +1,4 @@
-import { ALL_LINES, PATTERNS, STRUCTURES, UNITS, WORDS, WORD_ORDER, linesWithWord, lessonById, unitById, type Line, type Token, type Word } from "./course";
+import { ALL_LINES, PATTERNS, STRUCTURES, UNITS, teachOf, WORDS, WORD_ORDER, linesWithWord, lessonById, unitById, type Line, type Token, type Word } from "./course";
 import type { ProgressData } from "./store";
 import { dueItems } from "./stats";
 
@@ -15,7 +15,8 @@ export type Exercise =
   | { kind: "structure"; structure: string }
   | { kind: "breakdown"; structure: string; lineIds: string[] }
   | { kind: "arrange"; lineId: string; extras: string[] }
-  | { kind: "read"; lineId: string; highlight?: string[]; title?: "verse" | "chunk" };
+  | { kind: "read"; lineId: string; highlight?: string[]; title?: "verse" | "chunk" }
+  | { kind: "check"; ref: string; n: number; order: number[] };
 
 export type Step = Exercise & { id: string; item?: string };
 
@@ -202,6 +203,14 @@ function arrange(line: Line): Step {
   return { id: sid(), kind: "arrange", lineId: line.id, extras };
 }
 
+/** A written question that tests the idea just taught ("p:un", "s:of"). */
+function checkStep(ref: string, n: number): Step | null {
+  const c = teachOf(ref).checks[n];
+  if (!c) return null;
+  return { id: sid(), kind: "check", ref, n, order: shuffle(c.options.map((_, i) => i)), item: ref.startsWith("p:") ? ref : undefined };
+}
+const allChecks = (ref: string) => teachOf(ref).checks.map((_, n) => checkStep(ref, n)).filter((s): s is Step => !!s);
+
 // ---------- lesson builders ----------
 export function buildLesson(lessonId: string, progress: ProgressData): Step[] {
   const lesson = lessonById(lessonId);
@@ -221,6 +230,7 @@ function introduce(words: string[], patterns: string[], lines: Line[], progress:
   }
   for (const p of patterns) {
     steps.push({ id: sid(), kind: "pattern", pattern: p });
+    steps.push(...allChecks("p:" + p));
     const q = patternQ(p, lines);
     if (q) steps.push(q);
   }
@@ -283,6 +293,7 @@ function structureLesson(lessonId: string, progress: ProgressData): Step[] {
     steps.push({ id: sid(), kind: "structure", structure: st.id });
     const shown = [...sentences.slice(0, 2).map((l) => l.id), st.quran[0].id];
     steps.push({ id: sid(), kind: "breakdown", structure: st.id, lineIds: shown });
+    steps.push(...allChecks("s:" + st.id));
   } else if (sentences.length) {
     steps.push({ id: sid(), kind: "breakdown", structure: st.id, lineIds: sentences.slice(0, 2).map((l) => l.id) });
   }
@@ -332,7 +343,9 @@ export function buildPractice(progress: ProgressData, size = 10): Step[] {
   const steps: Step[] = [];
   for (const id of shuffle(chosen)) {
     if (id.startsWith("p:")) {
-      const q = patternQ(id.slice(2), poolLines);
+      // review a grammar idea: its own written question or a word that uses it
+      const n = teachOf(id).checks.length;
+      const q = n && (Math.random() < 0.5 || !PATTERNS[id.slice(2)].examples.length) ? checkStep(id, Math.floor(Math.random() * n)) : patternQ(id.slice(2), poolLines);
       if (q) steps.push(q);
       continue;
     }

@@ -54,6 +54,10 @@ body {
   line-height: 2.1;
   font-feature-settings: "calt", "liga";
 }
+/* Arabic inside a sentence of English / Bangla: big enough to read the harakat, without stretching the line */
+.ar.ar-in, html[data-script="indopak"] .ar.ar-in { line-height: 1.45; font-size: 1.4em; margin: 0 0.12em; }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 html[data-script="indopak"] .ar {
   font-family: "IndoPak Nastaleeq", var(--font-quran);
   line-height: 2.4;

@@ -9,6 +9,8 @@ Outputs:
 import json, os, sys, re, unicodedata, collections
 from load import load, stem, load_indopak
 import content, texts as T
+import teach
+T.PATTERNS = T.PATTERNS + teach.NEW_PATTERNS
 content.W = {unicodedata.normalize('NFC', k): v for k, v in content.W.items()}
 for grp in T.HAND.values():
     for l in grp:
@@ -266,6 +268,8 @@ for u in T.UNITS:
                                shape=[dict(ar=a, en=e, bn=b, role=r) for (a, e, b, r) in st['shape']],
                                expl_en=st['expl_en'], expl_bn=st['expl_bn'],
                                notes=[dict(en=a, bn=b) for (a, b) in T.STRUCTURE_NOTES.get(st['id'], [])],
+                               pages=teach.TEACH.get('s:' + st['id'], {}).get('pages', []),
+                               checks=teach.TEACH.get('s:' + st['id'], {}).get('checks', []),
                                quran=q_lines, everyday=ev_lines,
                                chunk=build_seg(st['chunk']) if st.get('chunk') else None))
         parts = [st_words] if len(st_words) <= 5 else [st_words[:4], st_words[4:]]
@@ -289,6 +293,14 @@ for u in T.UNITS:
         li = next((i for i, l in enumerate(lessons) if fw in l['words']), len(lessons) - 1)
         while li < len(lessons) - 1 and len(lessons[li]['patterns']) >= 2: li += 1
         lessons[li]['patterns'].append(p)
+    for l in lessons:
+        for p in reversed(teach.PLACE.get(l['id'], [])):
+            l['patterns'].insert(0, p); new_pats.append(p)
+    for p, lid in teach.MOVE.items():
+        if any(l['id'] == lid for l in lessons) and any(p in l['patterns'] for l in lessons):
+            for l in lessons:
+                if p in l['patterns']: l['patterns'].remove(p)
+            next(l for l in lessons if l['id'] == lid)['patterns'].append(p)
     lessons.append(dict(id=f'{u["id"]}-final', type='final', words=[], patterns=[]))
     known_words |= set(new_words); known_pats |= set(new_pats)
     # read new verses the learner can now (mostly) understand
@@ -365,9 +377,13 @@ for u in units_out:
                 if len(pat_ex[p]) < 4 and all(e['ar'] != tk['ar'] for e in pat_ex[p]):
                     pat_ex[p].append(dict(ar=tk['ar'], ip=tk.get('ip'), en=tk['en'], bn=tk['bn'], key=tk['key'], audio=None))
 patterns_out = {}
+def used_pats_all(): return set(p for u in units_out for p in u['newPatterns'])
 for p in T.PATTERNS:
     more = T.PATTERN_MORE.get(p['id'], ('', ''))
-    patterns_out[p['id']] = dict(p, examples=pat_ex.get(p['id'], []), more_en=more[0], more_bn=more[1])
+    tc = teach.TEACH.get('p:' + p['id'], {})
+    patterns_out[p['id']] = dict(p, examples=pat_ex.get(p['id'], []), more_en=more[0], more_bn=more[1],
+                                 pages=tc.get('pages', []), checks=tc.get('checks', []))
+    if p['id'] in used_pats_all() and not tc: problems.append('pattern without teaching pages: ' + p['id'])
 used_pats = set(p for u in units_out for p in u['newPatterns'])
 for p in used_pats:
     if p not in patterns_out: problems.append('pattern without card: ' + p)
@@ -407,9 +423,20 @@ for k, w in words_out.items(): need(w['ar'])
 for p in patterns_out.values():
     need(p['ar'])
     for e in p['examples']: need(e['ar'])
+teach_txt = []
+for tc in teach.TEACH.values():
+    for pg in tc['pages']:
+        for x in pg['ex'] + pg['vs']: need(x['ar']); teach_txt += [x['en'], x['bn']]
+        teach_txt += [pg['t_en'], pg['t_bn'], pg['x_en'], pg['x_bn']]
+    for ck in tc['checks']:
+        if ck['ar']: need(ck['ar'])
+        for o in ck['options']:
+            if ck['ar_opts']: need(o)
+            else: teach_txt += [o['en'], o['bn']]
+        teach_txt += [ck['q_en'], ck['q_bn'], ck['why_en'], ck['why_bn']]
 ARAB_RUN = re.compile(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+(?:\s+[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+)*')
 extra_txt = [x for pair in T.PATTERN_MORE.values() for x in pair] + [x for notes in T.STRUCTURE_NOTES.values() for pair in notes for x in pair]
-extra_txt += [x for st in T.STRUCTURES for x in (st['expl_en'], st['expl_bn'])]
+extra_txt += [x for st in T.STRUCTURES for x in (st['expl_en'], st['expl_bn'])] + teach_txt
 for txt in [w['tip'] for w in words_out.values()] + [p['expl_en'] for p in T.PATTERNS] + [p['expl_bn'] for p in T.PATTERNS] + extra_txt:
     for run in ARAB_RUN.findall(txt):
         for part in run.split():

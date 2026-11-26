@@ -11,7 +11,7 @@ import { DEMO_MODE } from "@/lib/supabase";
 import { useT } from "@/lib/i18n";
 import { Bar } from "./ui";
 import {
-  ArrangeEx, BreakdownEx, BuildEx, FillEx, IntroEx, MatchEx, McqEx, MeaningEx, PatternEx, PatternQEx, ReadEx, SpotEx, StructureEx, type Evaluate,
+  ArrangeEx, BreakdownEx, BuildEx, CheckEx, FillEx, IntroEx, MatchEx, McqEx, MeaningEx, PatternEx, PatternQEx, ReadEx, SpotEx, StructureEx, type Evaluate, type Pager,
 } from "./exercises/Exercises";
 
 export interface FinishInfo { mistakes: number; graded: number; newItems: string[] }
@@ -29,7 +29,8 @@ export function LessonPlayer({ steps: initial, mode, onFinish, renderDone }: {
   const [queue, setQueue] = useState<Step[]>(initial);
   const [i, setI] = useState(0);
   const [ready, setReady] = useState(false);
-  const [feedback, setFeedback] = useState<null | { correct: boolean; answer: React.ReactNode }>(null);
+  const [feedback, setFeedback] = useState<null | { correct: boolean; answer: React.ReactNode; why?: React.ReactNode }>(null);
+  const [pager, setPager] = useState<Pager | null>(null);
   const [mistakes, setMistakes] = useState(0);
   const [finished, setFinished] = useState<FinishInfo | null>(null);
   const [outOfHearts, setOutOfHearts] = useState(false);
@@ -86,8 +87,11 @@ export function LessonPlayer({ steps: initial, mode, onFinish, renderDone }: {
     } else {
       sfx("wrong");
       setMistakes((m) => m + 1);
-      setQueue((q) => [...q, { ...step, id: step.id + "r" }]);
-      if (mode === "lesson" && !isTeacher) {
+      // it comes back at the end (a check comes back with its options in a new order)
+      const again = step.kind === "check" ? { ...step, order: [...step.order].sort(() => Math.random() - 0.5) } : step;
+      setQueue((q) => [...q, { ...again, id: step.id + "r" }]);
+      // a check right after teaching is for understanding: it comes back later, but costs no heart
+      if (mode === "lesson" && !isTeacher && step.kind !== "check") {
         useProgress.getState().loseHeart();
         if (useProgress.getState().hearts <= 0) outOfHeartsPending.current = true;
       }
@@ -116,7 +120,7 @@ export function LessonPlayer({ steps: initial, mode, onFinish, renderDone }: {
   if (!step) return null;
 
   const pct = (100 * doneGraded) / totalGraded;
-  const props = { setEvaluate, locked: !!feedback, onDone: selfDone } as const;
+  const props = { setEvaluate, locked: !!feedback, onDone: selfDone, setPager } as const;
   const selfContinue = step.kind === "intro" || step.kind === "pattern" || step.kind === "structure" || step.kind === "read" || step.kind === "breakdown";
 
   return (
@@ -142,6 +146,7 @@ export function LessonPlayer({ steps: initial, mode, onFinish, renderDone }: {
         {step.kind === "breakdown" && <BreakdownEx step={step} {...props} />}
         {step.kind === "arrange" && <ArrangeEx step={step} {...props} />}
         {step.kind === "read" && <ReadEx step={step} {...props} />}
+        {step.kind === "check" && <CheckEx step={step} {...props} />}
       </div>
 
       {/* footer */}
@@ -154,10 +159,15 @@ export function LessonPlayer({ steps: initial, mode, onFinish, renderDone }: {
                   {feedback.correct ? `✅ ${t("correct")}` : `${t("wrong")}`}
                 </div>
                 {!feedback.correct && <div className="mt-1 text-coral-dark"><b>{t("answer")}:</b> {feedback.answer}</div>}
+                {feedback.why && <div className={`mt-1 text-[16px] leading-snug ${feedback.correct ? "text-emerald-dark" : "text-coral-dark"}`}>💡 {feedback.why}</div>}
               </div>
             )}
             {selfContinue ? (
-              <button onClick={() => selfDone(true)} className="btn btn-primary w-full text-lg">{t("continue")}</button>
+              pager && pager.at < pager.total - 1 ? (
+                <button onClick={pager.next} className="btn btn-primary w-full text-lg">{t("next")} → <span className="ml-1 text-sm opacity-80">{pager.at + 1}/{pager.total}</span></button>
+              ) : (
+                <button onClick={() => selfDone(true)} className="btn btn-primary w-full text-lg">{t("continue")}</button>
+              )
             ) : feedback ? (
               <button onClick={advance} className={`btn w-full text-lg ${feedback.correct ? "btn-primary" : "btn-coral"}`}>{t("continue")}</button>
             ) : (

@@ -9,6 +9,8 @@ const S = {
   quran: ["Quran", "কুরআন"],
   profile: ["Me", "আমি"],
   continue: ["Continue", "চালিয়ে যান"],
+  checkUnderstanding: ["Check your understanding", "বুঝেছেন কি না দেখুন"],
+  why: ["Why", "কেন"],
   check: ["Check", "যাচাই"],
   start: ["Start", "শুরু"],
   next: ["Next", "পরবর্তী"],

@@ -9,10 +9,12 @@ import { strengthLevel } from "@/lib/srs";
 import { useT } from "@/lib/i18n";
 import { Emoji, StrengthDots } from "@/components/ui";
 import { useWordSheet } from "@/components/WordSheet";
+import { Rich, TeachCard } from "@/components/exercises/Exercises";
 
 type Sort = "path" | "freq" | "root" | "weak";
 
 export default function LibraryPage() {
+  const [openPat, setOpenPat] = useState<string | null>(null);
   const p = useProgress();
   const { isTeacher } = useAuth();
   const { t, lang } = useT();
@@ -105,8 +107,14 @@ export default function LibraryPage() {
                     <div className={`flex-1 text-lg font-black ${lang === "bn" ? "bn" : ""}`}>{pt.emoji} {lang === "bn" ? pt.bn : pt.en}</div>
                     <StrengthDots level={strengthLevel(p.items["p:" + id])} />
                   </div>
-                  <p className={`mt-2 text-sm text-ink/80 ${lang === "bn" ? "bn" : ""}`}>{A(lang === "bn" ? pt.expl_bn : pt.expl_en)}</p>
-                  {(pt.more_en || pt.more_bn) && <p className={`mt-2 text-sm leading-relaxed text-ink/70 ${lang === "bn" ? "bn" : ""}`}>{A(lang === "bn" ? pt.more_bn : pt.more_en)}</p>}
+                  <p className={`mt-2 text-[17px] leading-relaxed text-ink/85 ${lang === "bn" ? "bn" : ""}`}><Rich text={lang === "bn" ? pt.expl_bn : pt.expl_en} /></p>
+                  {pt.pages?.length > 0 && (openPat === id ? (
+                    <div className="mt-3 space-y-3">{pt.pages.map((pg, i) => <TeachCard key={i} page={pg} />)}</div>
+                  ) : (
+                    <button onClick={() => setOpenPat(id)} className={`mt-2 text-[15px] font-bold text-sky ${lang === "bn" ? "bn" : ""}`}>
+                      {lang === "bn" ? "বিস্তারিত ও উদাহরণ ▾" : "Explanation and examples ▾"}
+                    </button>
+                  ))}
                   <div className="mt-2 flex flex-wrap gap-2" dir="rtl">
                     {pt.examples.map((e, i) => (
                       <div key={i} className="rounded-xl bg-sand px-2 py-1 text-center">
