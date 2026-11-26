@@ -1,0 +1,81 @@
+"use client";
+import { useProgress } from "./store";
+import type { Lang } from "./course";
+
+const S = {
+  learn: ["Learn", "শিখুন"],
+  review: ["Review", "রিভিউ"],
+  library: ["Library", "লাইব্রেরি"],
+  quran: ["Quran", "কুরআন"],
+  profile: ["Me", "আমি"],
+  continue: ["Continue", "চালিয়ে যান"],
+  check: ["Check", "যাচাই"],
+  start: ["Start", "শুরু"],
+  next: ["Next", "পরবর্তী"],
+  gotIt: ["Got it", "বুঝেছি"],
+  correct: ["Correct!", "সঠিক!"],
+  great: ["Great job!", "চমৎকার!"],
+  wrong: ["Not quite", "ঠিক হয়নি"],
+  answer: ["Answer", "উত্তর"],
+  newWord: ["New word", "নতুন শব্দ"],
+  newPattern: ["A pinch of grammar", "এক চিমটি ব্যাকরণ"],
+  whatMeans: ["What does this mean?", "এর অর্থ কী?"],
+  whichArabic: ["Which word means", "কোন শব্দের অর্থ"],
+  listenPick: ["Listen and choose the meaning", "শুনে অর্থ বাছাই করুন"],
+  tapWord: ["Tap the word that means", "যে শব্দের অর্থ — সেটিতে ট্যাপ করুন:"],
+  fillBlank: ["Complete the verse", "আয়াতটি পূর্ণ করুন"],
+  matchPairs: ["Match the pairs", "জোড়া মেলান"],
+  buildMeaning: ["Tap the meanings in order (right → left)", "ক্রমানুসারে অর্থগুলো ট্যাপ করুন (ডান → বাম)"],
+  verseMeaning: ["What does this say?", "এর অর্থ কী?"],
+  more: ["More", "আরও"],
+  less: ["Less", "কম"],
+  root: ["Root", "মূল (রুট)"],
+  family: ["Word family in the Quran", "কুরআনে এই রুটের শব্দ"],
+  youKnow: ["Words you already know", "যে শব্দ আপনি আগেই জানেন"],
+  appears: ["appears", "এসেছে"],
+  times: ["times in the Quran", "বার কুরআনে"],
+  wordsLearned: ["words learned", "শব্দ শেখা হয়েছে"],
+  mastered: ["mastered", "আয়ত্ত"],
+  ofQuran: ["of the Quran's words", "কুরআনের শব্দের"],
+  outOfHearts: ["Out of hearts", "হার্ট শেষ"],
+  outOfHeartsBody: ["Review words you know to earn a heart, or wait for them to refill.", "জানা শব্দ রিভিউ করে হার্ট অর্জন করুন, অথবা রিফিলের জন্য অপেক্ষা করুন।"],
+  practiceEarn: ["Review to earn a heart", "রিভিউ করে হার্ট নিন"],
+  lessonDone: ["Lesson complete!", "পাঠ সম্পন্ন!"],
+  unitDone: ["You understand it now!", "এখন আপনি বুঝতে পারেন!"],
+  readIt: ["Read it with meaning", "অর্থসহ পড়ুন"],
+  backHome: ["Back to path", "পাথে ফিরুন"],
+  daily: ["Daily goal", "দৈনিক লক্ষ্য"],
+  streak: ["day streak", "দিনের ধারা"],
+  settings: ["Settings", "সেটিংস"],
+  language: ["Meaning language", "অর্থের ভাষা"],
+  translit: ["Show transliteration", "উচ্চারণ দেখান"],
+  sound: ["Sound effects", "সাউন্ড"],
+  signOut: ["Sign out", "সাইন আউট"],
+  leaderboard: ["Leaderboard", "লিডারবোর্ড"],
+  badges: ["Badges", "ব্যাজ"],
+  nothingDue: ["Nothing due — here's a quick practice.", "কিছু বাকি নেই — একটি ছোট অনুশীলন।"],
+  dueNow: ["due for review", "রিভিউয়ের সময় হয়েছে"],
+  startReview: ["Start review", "রিভিউ শুরু"],
+  words: ["Words", "শব্দ"],
+  patterns: ["Patterns", "প্যাটার্ন"],
+  search: ["Search", "খুঁজুন"],
+  locked: ["Finish the previous lesson first", "আগের পাঠ শেষ করুন"],
+  teacher: ["Teacher", "শিক্ষক"],
+  understood: ["understood", "বোঝা যায়"],
+  related: ["Sounds familiar?", "চেনা লাগছে?"],
+  inContext: ["In context", "প্রসঙ্গে"],
+  listen: ["Listen", "শুনুন"],
+  quit: ["Quit lesson?", "পাঠ ছেড়ে দেবেন?"],
+  quitBody: ["Your progress in this lesson will be lost.", "এই পাঠের অগ্রগতি হারিয়ে যাবে।"],
+  keepGoing: ["Keep learning", "চালিয়ে যান"],
+  quitYes: ["Quit", "ছেড়ে দিন"],
+};
+export type StrKey = keyof typeof S;
+
+export function tr(k: StrKey, lang: Lang) {
+  return S[k][lang === "bn" ? 1 : 0];
+}
+export function useT() {
+  const lang = useProgress((s) => s.settings.lang);
+  return { t: (k: StrKey) => tr(k, lang), lang };
+}

@@ -1,0 +1,115 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #fffaf0;
+  --color-sand: #f6efe1;
+  --color-ink: #1d2b2a;
+  --color-muted: #6b7a78;
+  --color-line: #e8dfcc;
+  --color-emerald: #0e7c66;
+  --color-emerald-dark: #0a5e4d;
+  --color-emerald-light: #d8f1e9;
+  --color-gold: #f6be3b;
+  --color-gold-dark: #c9921a;
+  --color-gold-light: #fff1c9;
+  --color-coral: #e5534b;
+  --color-coral-dark: #b83b34;
+  --color-coral-light: #fde4e1;
+  --color-sky: #2f8fd8;
+  --color-sky-light: #e1f0fb;
+  --color-plum: #8b5cf6;
+  --font-sans: "Nunito Variable", "Hind Siliguri", "Amiri Quran", ui-rounded, system-ui, sans-serif;
+  --font-quran: "Amiri Quran", "Amiri", "Scheherazade New", serif;
+  --font-bangla: "Hind Siliguri", "Nunito Variable", "Amiri Quran", sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+html,
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Arabic / Quran text */
+.ar {
+  font-family: var(--font-quran);
+  direction: rtl;
+  line-height: 2.1;
+  font-feature-settings: "calt", "liga";
+}
+.bn,
+:lang(bn) {
+  font-family: var(--font-bangla);
+}
+
+/* subtle 8-point star pattern used as a geometric accent */
+.pattern-bg {
+  background-color: var(--color-emerald);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.09' stroke-width='1.2'%3E%3Crect x='16' y='16' width='24' height='24'/%3E%3Crect x='16' y='16' width='24' height='24' transform='rotate(45 28 28)'/%3E%3Ccircle cx='28' cy='28' r='6'/%3E%3C/g%3E%3C/svg%3E");
+}
+.pattern-soft {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56' viewBox='0 0 56 56'%3E%3Cg fill='none' stroke='%230e7c66' stroke-opacity='0.06' stroke-width='1.2'%3E%3Crect x='16' y='16' width='24' height='24'/%3E%3Crect x='16' y='16' width='24' height='24' transform='rotate(45 28 28)'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* chunky 3D buttons */
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3.5 font-extrabold tracking-wide transition select-none;
+  @apply active:translate-y-[3px] disabled:opacity-50 disabled:active:translate-y-0;
+}
+.btn-primary {
+  @apply bg-emerald text-white shadow-[0_4px_0_var(--color-emerald-dark)] active:shadow-[0_1px_0_var(--color-emerald-dark)];
+}
+.btn-gold {
+  @apply bg-gold text-ink shadow-[0_4px_0_var(--color-gold-dark)] active:shadow-[0_1px_0_var(--color-gold-dark)];
+}
+.btn-coral {
+  @apply bg-coral text-white shadow-[0_4px_0_var(--color-coral-dark)] active:shadow-[0_1px_0_var(--color-coral-dark)];
+}
+.btn-ghost {
+  @apply bg-white text-ink border-2 border-line shadow-[0_4px_0_var(--color-line)] active:shadow-[0_1px_0_var(--color-line)];
+}
+.card {
+  @apply rounded-3xl bg-white border-2 border-line;
+}
+.chip {
+  @apply rounded-2xl border-2 border-line bg-white shadow-[0_3px_0_var(--color-line)] transition active:translate-y-[2px] active:shadow-none;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-pop { animation: pop 0.35s ease-out both; }
+@keyframes slideup {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slideup { animation: slideup 0.28s cubic-bezier(.2,.9,.3,1) both; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.animate-shake { animation: shake 0.4s ease-in-out; }
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-floaty { animation: floaty 2.6s ease-in-out infinite; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+.pb-safe { padding-bottom: calc(var(--safe-bottom) + 0.5rem); }
+.pt-safe { padding-top: var(--safe-top); }
