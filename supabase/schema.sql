@@ -66,7 +66,8 @@ create trigger on_auth_user_created after insert on auth.users
 create or replace function public.protect_role() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  if new.role is distinct from old.role and not public.is_superadmin() then
+  -- auth.uid() is null when run from the SQL Editor / server, where role changes are allowed
+  if new.role is distinct from old.role and auth.uid() is not null and not public.is_superadmin() then
     new.role := old.role;
   end if;
   return new;
@@ -74,6 +75,12 @@ end $$;
 drop trigger if exists protect_role on public.profiles;
 create trigger protect_role before update on public.profiles
   for each row execute function public.protect_role();
+
+-- ============ table access for signed-in users (row level security below still restricts rows) ============
+grant usage on schema public to authenticated;
+grant select, insert, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.progress to authenticated;
+grant select, insert, update, delete on public.classes, public.class_members to authenticated;
 
 -- ============ row level security ============
 alter table public.profiles enable row level security;
