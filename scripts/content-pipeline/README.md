@@ -31,4 +31,6 @@ The build prints a report (words per unit, lessons, % of the Quran covered) and 
 - Morphology (roots, lemmas): Quranic Arabic Corpus via github.com/mustafa0x/quran-morphology (GPL)
 - Word-by-word English glosses, transliteration, word audio ids: quran.com via `@kmaslesa/holy-quran-word-by-word-full-data`
 - Quran text, Saheeh International (en) and Muhiuddin Khan (bn) translations: tanzil.net via `quran-json`
+- Word-by-word Bangla glosses: github.com/SadaqaWorks/Word-By-Word-Quran-Android (MIT)
+- Root ideas and how each root's words connect: `roots.py` (hand-written); "grammar in action" groups: `teach.py` (RULES)
 - IndoPak Nastaleeq text (quran.com / QUL) via github.com/quran8vs/IndoPak; font “AlQuran IndoPak by QuranWBW” v4.2.1 from quran.com (credit Ayman Siddiqui, QuranWBW.com — not for sale)

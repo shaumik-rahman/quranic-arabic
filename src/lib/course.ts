@@ -3,7 +3,12 @@ import coverageJson from "@/data/coverage.json";
 
 export type Lang = "en" | "bn";
 
-export interface FamilyMember { key: string; ar: string; count: number; ex: string; exIp?: string | null; gloss: string; ref: string; self: boolean }
+export interface FamilyMember { key: string; ar: string; count: number; ex: string; exIp?: string | null; gloss: string; bn?: string; kind?: string; ref: string; self: boolean }
+/** a root's core idea, and a sentence linking its words back to it */
+export interface RootInfo { idea_en: string; idea_bn: string; story_en: string; story_bn: string }
+/** a "grammar in action" question group: pieces that compete with each other, and what each one means */
+export interface RuleGroup { q_en: string; q_bn: string; opts: Record<string, [string, string]>; others: Record<string, [string, string]> }
+export interface AcrossWord { ar: string; ip?: string | null; en: string; bn: string; key: string | null; ref: string }
 export interface Word {
   key: string; pos: string; ar: string; en: string; bn: string; emoji: string;
   cog: { en?: string; bn?: string; hi?: string }; tip: string;
@@ -41,8 +46,10 @@ export interface Pattern {
   id: string; ar: string; en: string; bn: string; emoji: string; expl_en: string; expl_bn: string;
   more_en?: string; more_bn?: string; pages: TeachPage[]; checks: Check[];
   examples: { ar: string; ip?: string | null; en: string; bn: string; key?: string; audio: string | null }[];
+  /** more examples from all over the Quran */
+  across?: { count: number; words: AcrossWord[]; verses: Line[] } | null;
 }
-export interface Course { totalTokens: number; words: Record<string, Word>; patterns: Record<string, Pattern>; texts: Text[]; units: Unit[] }
+export interface Course { totalTokens: number; words: Record<string, Word>; patterns: Record<string, Pattern>; roots: Record<string, RootInfo>; rules: Record<string, RuleGroup>; texts: Text[]; units: Unit[] }
 
 export const course = courseJson as unknown as Course;
 export const coverage = coverageJson as unknown as {
@@ -53,6 +60,26 @@ export const coverage = coverageJson as unknown as {
 
 export const WORDS = course.words;
 export const PATTERNS = course.patterns;
+export const ROOTS = course.roots;
+export const RULES = course.rules;
+/** how a family member relates to its root (from its shape) */
+export const KIND_LABEL: Record<string, [string, string]> = {
+  verb: ["action (verb)", "কাজ (ক্রিয়া)"],
+  verb2: ["verb: do it a lot / make it so", "ক্রিয়া: বেশি করা / করানো"],
+  verb3: ["verb: do it with someone", "ক্রিয়া: কারও সাথে করা"],
+  verb4: ["verb: make it happen", "ক্রিয়া: ঘটানো / করানো"],
+  verb5: ["verb: do it to oneself", "ক্রিয়া: নিজের উপর করা"],
+  verb6: ["verb: do it to each other", "ক্রিয়া: পরস্পরে করা"],
+  verb7: ["verb: it happens", "ক্রিয়া: নিজে থেকে ঘটে"],
+  verb8: ["verb: do it for oneself", "ক্রিয়া: নিজের জন্য করা"],
+  verb10: ["verb: ask for it", "ক্রিয়া: চাওয়া"],
+  doer: ["the one who does it", "যে করে"],
+  done_to: ["the one it's done to", "যার প্রতি করা হয়"],
+  act: ["the act of doing it", "কাজটি নিজে"],
+  place: ["a place for it", "তার স্থান"],
+  adj: ["describing word", "বিশেষণ"],
+  name: ["name", "নাম"],
+};
 export const UNITS = course.units;
 export const TEXTS = course.texts;
 export const TOTAL_TOKENS = course.totalTokens;

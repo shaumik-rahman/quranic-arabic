@@ -589,3 +589,30 @@ TEACH["s:alladhina"] = dict(pages=[
 PLACE = {"u1-s-is-1": ["un"], "u1-s-of": ["endings"]}
 # patterns moved to a lighter lesson of the same unit (so no lesson teaches too much at once)
 MOVE = {"doer": "u1-s-of"}
+
+# =====================================================================================
+# "Grammar in action" questions: show a real Quran word and ask what its piece tells you.
+# Each group lists the pieces that compete with each other; the options are what each piece means.
+# `others` are fixed options for forms that have no piece of their own (e.g. "he" in the past tense).
+# =====================================================================================
+RULES = {
+    "owner": dict(q_en="Whose? Look at the ending.", q_bn="কার? শেষটা দেখুন।",
+                  opts={"i": ("my / me", "আমার / আমাকে"), "ka": ("your (one person)", "তোমার (একজন)"),
+                        "kum": ("your (many people)", "তোমাদের (অনেকে)"), "hu": ("his / him", "তার / তাকে"),
+                        "huma": ("of the two of them", "তাদের দুজনের"), "hum": ("their / them", "তাদের"), "na": ("our / us", "আমাদের")},
+                  others={}),
+    "now": dict(q_en="Who does it? Look at the first letter.", q_bn="কে করে? প্রথম অক্ষর দেখুন।",
+                opts={"i_do": ("I", "আমি"), "we_do": ("we", "আমরা"), "ya": ("he / they", "সে / তারা")},
+                others={"you": ("you", "তুমি")}),
+    "past": dict(q_en="Who did it? Look at the ending.", q_bn="কে করেছে? শেষটা দেখুন।",
+                 opts={"you_did": ("you", "তুমি"), "we_did": ("we", "আমরা"), "they_did": ("they", "তারা")},
+                 others={"he": ("he (no ending)", "সে (শেষে কিছু নেই)")}),
+    "the_a": dict(q_en="“a …” or “the …”?", q_bn="“একটি …” নাকি নির্দিষ্ট “…টি”?",
+                  opts={"al": ("the …", "…টি (নির্দিষ্ট)"), "un": ("a …", "একটি …")}, others={}),
+    "shape": dict(q_en="What does the shape tell you?", q_bn="ছাঁচটি কী বলে?",
+                  opts={"doer": ("the one who does it", "যে কাজটি করে"), "done_to": ("the one it is done to", "যার প্রতি কাজটি করা হয়")},
+                  others={"act": ("the action itself", "কাজটি নিজেই")}),
+    "joined": dict(q_en="What does the little letter at the front add?", q_bn="সামনের ছোট অক্ষরটি কী যোগ করে?",
+                   opts={"wa": ("and", "এবং"), "bi": ("in / with / by", "-এ / দিয়ে"), "li": ("for / belongs to", "জন্য / -এর"), "fa": ("so / then", "তাই / তারপর")},
+                   others={}),
+}

@@ -2,7 +2,8 @@
 import { useScript } from "@/lib/script";
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
-import { PATTERNS, TOTAL_TOKENS, WORDS, meaning, type Token } from "@/lib/course";
+import { PATTERNS, ROOTS, TOTAL_TOKENS, WORDS, meaning, type Token } from "@/lib/course";
+import { RootBox } from "./exercises/Exercises";
 import { useProgress } from "@/lib/store";
 import { strengthLevel } from "@/lib/srs";
 import { useT } from "@/lib/i18n";
@@ -129,25 +130,7 @@ function Sheet({ p, onClose }: { p: SheetPayload; onClose: () => void }) {
                 </div>
               </div>
             )}
-            {w && w.family.length > 1 && (
-              <div>
-                <div className="mb-2 text-xs font-extrabold uppercase tracking-wider text-muted">{t("family")} · <span className="ar normal-case">{root}</span></div>
-                <div className="divide-y-2 divide-line overflow-hidden rounded-2xl border-2 border-line bg-white">
-                  {w.family.map((f) => {
-                    const fw = WORDS[f.key];
-                    return (
-                      <div key={f.key} className={`flex items-center gap-3 px-3 py-2 ${f.self ? "bg-emerald-light" : ""}`}>
-                        <div className="w-24 text-right"><span className="ar text-xl">{T({ ar: f.ex, ip: f.exIp })}</span></div>
-                        <div className="flex-1 text-sm">
-                          <div className="font-bold">{fw ? meaning(fw, lang) : f.gloss}</div>
-                          <div className="text-xs text-muted">{f.count}× · {f.ref}{items[f.key] ? " · ✓" : ""}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {w && w.root && (ROOTS[w.root] || w.family.some((f) => !f.self)) && <RootBox word={p.key!} max={6} />}
           </div>
         )}
       </div>

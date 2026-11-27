@@ -12,7 +12,7 @@ import { useWordSheet } from "@/components/WordSheet";
 import { Ring } from "@/components/ui";
 
 type Lemma = [key: string, ar: string, root: string, count: number];
-type SurahData = { n: number; verses: { v: number; en: string; bn: string; w: [string, string, string, number, string?][] }[] };
+type SurahData = { n: number; verses: { v: number; en: string; bn: string; w: [string, string, string, number, string?, string?][] }[] };
 
 let lemmaCache: Lemma[] | null = null;
 async function getLemmas() {
@@ -98,7 +98,7 @@ export default function SurahReader() {
                     const loc = `${pad(num)}_${pad(v.v)}_${pad(i + 1)}`;
                     return (
                       <button key={i}
-                        onClick={() => open({ ar: w[0], ip: w[4] || null, en: w[1], bn: undefined, tr: w[2], key: WORDS[key] ? key : undefined, audio: loc, lemma: { ar: lar, root, count } })}
+                        onClick={() => open({ ar: w[0], ip: w[4] || null, en: w[1], bn: w[5] || undefined, tr: w[2], key: WORDS[key] ? key : undefined, audio: loc, lemma: { ar: lar, root, count } })}
                         className={`rounded-lg px-1 transition ${known ? "bg-emerald-light text-emerald-dark" : "hover:bg-gold-light"}`}>
                         <span className="ar block text-[28px]">{script === "indopak" && w[4] ? w[4] : w[0]}</span>
                         {translit && <span className="block text-[10px] italic text-muted" dir="ltr">{w[2]}</span>}

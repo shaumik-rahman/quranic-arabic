@@ -9,7 +9,7 @@ Outputs:
 import json, os, sys, re, unicodedata, collections
 from load import load, stem, load_indopak
 import content, texts as T
-import teach
+import teach, roots
 T.PATTERNS = T.PATTERNS + teach.NEW_PATTERNS
 content.W = {unicodedata.normalize('NFC', k): v for k, v in content.W.items()}
 for grp in T.HAND.values():
@@ -67,6 +67,9 @@ for loc, t in sorted(tw.items()):
     exact_idx.setdefault(unicodedata.normalize('NFC', t), loc); norm_idx.setdefault(norm2(t), loc)
 
 def wbw_gloss(loc): return wb[loc]['translation']['text'].strip()
+BN_WBW = json.load(open(f'{SRC}/bn_wbw.json'))   # Bangla word by word (Word-By-Word-Quran-Android, MIT)
+def bn_gloss(loc): return '' if loc[:2] == (37, 130) else BN_WBW.get('%d:%d:%d' % loc, '')
+def clean_gloss(g): return re.sub(r'\s+', ' ', re.sub(r'[\[\]"\'“”]', '', g)).strip(' ,.;-')
 def wbw_tr(loc): return wb[loc]['transliteration']['text'].strip()
 def audio_of(loc): return '%03d_%03d_%03d' % loc
 
@@ -108,6 +111,7 @@ def patterns_of(segs):
             vf1 = sg['f'].get('VF') == '1'
             if 'ACT_PCPL' in tags and vf1: pats.append('doer')
             if 'PASS_PCPL' in tags and vf1: pats.append('done_to')
+            if 'INDEF' in tags and 'PN' not in tags: pats.append('un')
             if 'MP' in tags and 'PRON' not in tags and re.search(r'(ين|ون)[ً-ٰٟ]*$', sg['form']): pats.append('plural')
     out = []
     for p in pats:
@@ -138,7 +142,7 @@ def quran_line(s, v, a, b):
     for i, w in enumerate(range(a, b + 1)):
         loc = (s, v, w)
         toks.append(dict(ar=tw.get(loc) or ''.join(sg['form'] for sg in words[loc]),
-                         en=T.EN_OVERRIDE.get(loc, wbw_gloss(loc)), bn=bn[i] if i < len(bn) else '',
+                         en=T.EN_OVERRIDE.get(loc, wbw_gloss(loc)), bn=bn[i] if i < len(bn) and bn[i] else bn_gloss(loc),
                          key=tok_key[loc], pats=patterns_of(words[loc]), audio=audio_of(loc), tr=wbw_tr(loc),
                          loc=f'{s}:{v}:{w}', ip=IP.get(loc)))
     full = (a == 1 and b == allw[-1])
@@ -209,7 +213,7 @@ def reader_line(s, v, known):
     for w in allw:
         loc = (s, v, w); k = tok_key[loc]
         toks.append(dict(ar=tw.get(loc) or ''.join(sg['form'] for sg in words[loc]), en=T.EN_OVERRIDE.get(loc, wbw_gloss(loc)),
-                         bn='', key=k, pats=patterns_of(words[loc]), audio=audio_of(loc), tr=wbw_tr(loc),
+                         bn=bn_gloss(loc), key=k, pats=patterns_of(words[loc]), audio=audio_of(loc), tr=wbw_tr(loc),
                          loc=f'{s}:{v}:{w}', ip=IP.get(loc), known=k in known))
     return dict(id=f'{s}:{v}', ref=f'{CH_EN[s]["transliteration"]} {s}:{v}', kind='quran', verseAudio='%03d%03d' % (s, v),
                 en=TR_EN[(s, v)], bn=TR_BN[(s, v)], tokens=toks, ar=' '.join(t['ar'] for t in toks), newVerse=True)
@@ -242,6 +246,7 @@ def chunk_words(new_words):
 
 # ---------------- units & lessons ----------------
 known_words, known_pats = set(), set()
+known_at_pat = {}
 units_out = []
 for u in T.UNITS:
     if 'segs' in u: lines = [build_seg(sg) for sg in u['segs']]
@@ -252,6 +257,7 @@ for u in T.UNITS:
             k = tk['key']
             if k not in known_words and k not in new_words and k not in bucket: bucket.append(k)
             for p in tk['pats']:
+                if p in ('un', 'endings'): continue
                 if p not in known_pats and p not in new_pats:
                     new_pats.append(p); pat_first_word[p] = k
     for ln in lines: collect(ln['tokens'], new_words)
@@ -303,6 +309,7 @@ for u in T.UNITS:
             next(l for l in lessons if l['id'] == lid)['patterns'].append(p)
     lessons.append(dict(id=f'{u["id"]}-final', type='final', words=[], patterns=[]))
     known_words |= set(new_words); known_pats |= set(new_pats)
+    for p in new_pats: known_at_pat.setdefault(p, set(known_words))
     # read new verses the learner can now (mostly) understand
     picks = pick_new_verses(known_words, set(new_words))
     new_verses = []
@@ -346,12 +353,33 @@ for k, c in cnt.items():
     r = root_of.get(k)
     if r: by_root[r].append(k)
 def lemma_ar(k): return k.split('|')[0] if not k.startswith('PRON:') else k
+PATS_ALL = {loc: patterns_of(segs) for loc, segs in words.items()}
+lemma_locs = collections.defaultdict(list)
+for loc in words: lemma_locs[tok_key[loc]].append(loc)
+def shape_kind(sg):
+    """how a word relates to its root: the doer, the done-to, the act, a place, a verb (with its form)…"""
+    tags = sg['f'].get('_tags', []); vf = sg['f'].get('VF', '1')
+    if sg['pos'] == 'V': return 'verb' if vf == '1' else 'verb' + vf
+    if 'ACT_PCPL' in tags: return 'doer'
+    if 'PASS_PCPL' in tags: return 'done_to'
+    if 'VN' in tags: return 'act'
+    if 'PN' in tags: return 'name'
+    lem = re.sub(r'[^\u0621-\u064A]', '', sg['f'].get('LEM', '')); root = sg['f'].get('ROOT', '')
+    if root and lem.startswith('م') and lem[1:] == root and 'ADJ' not in tags: return 'place'
+    if 'ADJ' in tags: return 'adj'
+    return 'noun'
+def best_loc(k):
+    """the plainest common form of a lemma: fewest prefixes/suffixes, then the most frequent spelling"""
+    locs = lemma_locs[k]
+    forms = collections.Counter(norm(tw.get(l, '')) for l in locs)
+    return min(locs, key=lambda l: (len(words[l]), -forms[norm(tw.get(l, ''))], l))
 def family(root, self_key):
     out = []
     for k in sorted(by_root.get(root, []), key=lambda k: -cnt[k]):
-        loc = first_loc[k]
-        out.append(dict(key=k, ar=lemma_ar(k), count=cnt[k], ex=tw.get(loc, ''), exIp=ip_word(loc), gloss=wbw_gloss(loc),
-                        ref=f'{loc[0]}:{loc[1]}', self=(k == self_key)))
+        loc = best_loc(k)
+        out.append(dict(key=k, ar=lemma_ar(k), count=cnt[k], ex=tw.get(loc, ''), exIp=ip_word(loc),
+                        gloss=clean_gloss(wbw_gloss(loc)), bn=clean_gloss(bn_gloss(loc)),
+                        kind=shape_kind(stem(words[loc])), ref=f'{loc[0]}:{loc[1]}', self=(k == self_key)))
     return out[:10]
 
 words_out = {}
@@ -376,13 +404,51 @@ for u in units_out:
             for p in tk['pats']:
                 if len(pat_ex[p]) < 4 and all(e['ar'] != tk['ar'] for e in pat_ex[p]):
                     pat_ex[p].append(dict(ar=tk['ar'], ip=tk.get('ip'), en=tk['en'], bn=tk['bn'], key=tk['key'], audio=None))
+across_used = set()
+def across(p):
+    """more examples of a piece of grammar from all over the Quran: frequent words, and two short verses"""
+    locs = [l for l, ps in PATS_ALL.items() if p in ps]
+    locs_by_verse = collections.defaultdict(list)
+    for l in locs: locs_by_verse[l[:2]].append(l)
+    taken = set(norm(e['ar']) for e in pat_ex.get(p, []))
+    known = known_at_pat.get(p, set())
+    by_lem = collections.defaultdict(list)
+    for l in locs: by_lem[tok_key[l]].append(l)
+    def plain(l): return (len(PATS_ALL[l]), len(words[l]))
+    lems = sorted(by_lem, key=lambda k: (k not in words_out, -len(by_lem[k])))
+    rows = []
+    for k in lems:
+        l = min(by_lem[k], key=lambda l: (plain(l), l))
+        if norm(tw.get(l, '')) in taken or len(PATS_ALL[l]) > 2: continue
+        taken.add(norm(tw.get(l, '')))
+        rows.append(dict(ar=tw.get(l, ''), ip=ip_word(l), en=clean_gloss(wbw_gloss(l)), bn=clean_gloss(bn_gloss(l)),
+                         key=k if k in words_out else None, ref=f'{l[0]}:{l[1]}'))
+        if len(rows) == 5: break
+    cands = []
+    for (sv, vv) in set((l[0], l[1]) for l in locs):
+        if (sv, vv) in curriculum_verses: continue
+        ks = verse_keys[(sv, vv)]
+        if not 3 <= len(ks) <= 8: continue
+        unknown = len([k for k in ks if k not in known])
+        if unknown > 3: continue
+        hits = sum(1 for l in locs_by_verse[(sv, vv)])
+        cands.append((unknown, -min(hits, 2), len(ks), sv, vv))
+    cands.sort()
+    verses, surahs = [], set()
+    for (_, _, _, sv, vv) in cands:
+        if sv in surahs or (sv, vv) in across_used: continue
+        verses.append(reader_line(sv, vv, known)); surahs.add(sv); across_used.add((sv, vv))
+        if len(verses) == 2: break
+    return dict(count=len(locs), words=rows, verses=verses)
+
 patterns_out = {}
 def used_pats_all(): return set(p for u in units_out for p in u['newPatterns'])
 for p in T.PATTERNS:
     more = T.PATTERN_MORE.get(p['id'], ('', ''))
     tc = teach.TEACH.get('p:' + p['id'], {})
     patterns_out[p['id']] = dict(p, examples=pat_ex.get(p['id'], []), more_en=more[0], more_bn=more[1],
-                                 pages=tc.get('pages', []), checks=tc.get('checks', []))
+                                 pages=tc.get('pages', []), checks=tc.get('checks', []),
+                                 across=across(p['id']) if p['id'] in used_pats_all() and p['id'] != 'endings' else None)
     if p['id'] in used_pats_all() and not tc: problems.append('pattern without teaching pages: ' + p['id'])
 used_pats = set(p for u in units_out for p in u['newPatterns'])
 for p in used_pats:
@@ -437,6 +503,7 @@ for tc in teach.TEACH.values():
 ARAB_RUN = re.compile(r'[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+(?:\s+[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+)*')
 extra_txt = [x for pair in T.PATTERN_MORE.values() for x in pair] + [x for notes in T.STRUCTURE_NOTES.values() for pair in notes for x in pair]
 extra_txt += [x for st in T.STRUCTURES for x in (st['expl_en'], st['expl_bn'])] + teach_txt
+extra_txt += [x for r in roots.ROOTS.values() for x in r]
 for txt in [w['tip'] for w in words_out.values()] + [p['expl_en'] for p in T.PATTERNS] + [p['expl_bn'] for p in T.PATTERNS] + extra_txt:
     for run in ARAB_RUN.findall(txt):
         for part in run.split():
@@ -447,7 +514,11 @@ for txt in [w['tip'] for w in words_out.values()] + [p['expl_en'] for p in T.PAT
 if missing_ip: problems.append('no IndoPak for: ' + ' | '.join(sorted(set(missing_ip))))
 json.dump(converted, open(os.path.join(HERE, 'indopak_converted_review.json'), 'w'), ensure_ascii=False, indent=0)
 
-course = dict(totalTokens=TOTAL, ip=AR2IP, words=words_out, patterns=patterns_out,
+roots_out = {r: dict(idea_en=a, idea_bn=b, story_en=c, story_bn=d) for r, (a, b, c, d) in roots.ROOTS.items()}
+for w in words_out.values():
+    if w['root'] and any(not f['self'] for f in w['family']) and w['root'] not in roots_out:
+        problems.append('no root story for ' + w['root'])
+course = dict(totalTokens=TOTAL, ip=AR2IP, words=words_out, patterns=patterns_out, roots=roots_out, rules=teach.RULES,
               texts=[dict({k: v for k, v in t.items()}) for t in texts_out], units=units_out)
 
 # ---------------- coverage ----------------
@@ -481,7 +552,7 @@ for n in range(1, 115):
         if loc[0] == n: by_v[loc[1]].append(loc)
     for v in sorted(by_v):
         out.append(dict(v=v, en=TR_EN[(n, v)], bn=TR_BN[(n, v)],
-                        w=[[tw.get(l) or ''.join(sg['form'] for sg in words[l]), wbw_gloss(l), wbw_tr(l), lem_idx[tok_key[l]], IP.get(l, '')]
+                        w=[[tw.get(l) or ''.join(sg['form'] for sg in words[l]), wbw_gloss(l), wbw_tr(l), lem_idx[tok_key[l]], IP.get(l, ''), bn_gloss(l)]
                            for l in sorted(by_v[v])]))
     dump(dict(n=n, verses=out), f'{OUT}/public/quran/{n}.json')
 

@@ -7,10 +7,11 @@ import { useProgress } from "@/lib/store";
 import { tokenPayload, useWordSheet } from "./WordSheet";
 
 /** A verse / phrase where every word is tappable. */
-export function ArabicLine({ line, size = "text-3xl", showGloss = false, highlightKnown = false, showTranslation = true, highlightKey, highlightKeys, fadeUnknown = false }: {
+export function ArabicLine({ line, size = "text-3xl", showGloss = false, highlightKnown = false, showTranslation = true, highlightKey, highlightKeys, highlightPat, fadeUnknown = false }: {
   line: Line; size?: string; showGloss?: boolean; highlightKnown?: boolean; showTranslation?: boolean; highlightKey?: string;
   /** highlight a run of words (e.g. a repeated phrase) */ highlightKeys?: string[];
   /** words the learner doesn't know yet are faded and show their meaning */ fadeUnknown?: boolean;
+  /** highlight every word that carries this piece of grammar */ highlightPat?: string;
 }) {
   const open = useWordSheet();
   const lang = useProgress((s) => s.settings.lang);
@@ -32,7 +33,7 @@ export function ArabicLine({ line, size = "text-3xl", showGloss = false, highlig
         <div dir="rtl" className="flex flex-1 flex-wrap gap-x-2 gap-y-1">
           {line.tokens.map((t, i) => {
             const known = highlightKnown && !!items[t.key];
-            const hl = (highlightKey && t.key === highlightKey) || hlIdx.has(i);
+            const hl = (highlightKey && t.key === highlightKey) || hlIdx.has(i) || (!!highlightPat && t.pats.includes(highlightPat));
             const unknown = fadeUnknown && !items[t.key];
             return (
               <button key={i} onClick={() => open(tokenPayload(t))}

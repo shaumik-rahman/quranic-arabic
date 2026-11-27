@@ -1,4 +1,4 @@
-import { ALL_LINES, PATTERNS, STRUCTURES, UNITS, teachOf, WORDS, WORD_ORDER, linesWithWord, lessonById, unitById, type Line, type Token, type Word } from "./course";
+import { ALL_LINES, PATTERNS, RULES, STRUCTURES, UNITS, teachOf, WORDS, WORD_ORDER, linesWithWord, lessonById, unitById, type Line, type Token, type Word } from "./course";
 import type { ProgressData } from "./store";
 import { dueItems } from "./stats";
 
@@ -16,7 +16,8 @@ export type Exercise =
   | { kind: "breakdown"; structure: string; lineIds: string[] }
   | { kind: "arrange"; lineId: string; extras: string[] }
   | { kind: "read"; lineId: string; highlight?: string[]; title?: "verse" | "chunk" }
-  | { kind: "check"; ref: string; n: number; order: number[] };
+  | { kind: "check"; ref: string; n: number; order: number[] }
+  | { kind: "rule"; group: string; pattern: string; token: Token; options: string[] };
 
 export type Step = Exercise & { id: string; item?: string };
 
@@ -211,6 +212,41 @@ function checkStep(ref: string, n: number): Step | null {
 }
 const allChecks = (ref: string) => teachOf(ref).checks.map((_, n) => checkStep(ref, n)).filter((s): s is Step => !!s);
 
+/** which "grammar in action" group a piece belongs to */
+const RULE_OF: Record<string, string> = {};
+for (const [g, r] of Object.entries(RULES)) for (const p of Object.keys(r.opts)) RULE_OF[p] = g;
+const learnedPats = (progress: ProgressData, extra: string[] = []) =>
+  new Set([...Object.keys(progress.items).filter((k) => k.startsWith("p:")).map((k) => k.slice(2)), ...extra]);
+
+/** Grammar in action: a real word with this piece — what does the piece tell you? (Whose? Who? a or the?) */
+function ruleQ(pattern: string, learned: Set<string>, prefer: Line[] = []): Step | null {
+  const g = RULE_OF[pattern];
+  if (!g) return null;
+  const grp = RULES[g];
+  const rivals = Object.keys(grp.opts);
+  const others = [...rivals.filter((p) => p !== pattern && learned.has(p)), ...Object.keys(grp.others).map((o) => "x:" + o)];
+  if (!others.length) return null;
+  // the word must carry exactly one piece of this group, so there is one right answer
+  const fits = (t: Token) => t.pats.includes(pattern) && t.pats.filter((p) => rivals.includes(p)).length === 1 && t.ar.length < 18;
+  const lines = [...prefer, ...poolLines, ...(PATTERNS[pattern]?.across?.verses ?? [])];
+  let cands = lines.flatMap((l) => l.tokens).filter(fits);
+  const known = cands.filter((t) => WORDS[t.key]);
+  if (known.length) cands = known; // a word they know, so the question is only about the piece
+  if (!cands.length) return null;
+  const token = pick(cands);
+  return { id: sid(), kind: "rule", group: g, pattern, token, options: shuffle([pattern, ...shuffle(others).slice(0, 3)]), item: "p:" + pattern };
+}
+/** a few "grammar in action" questions on pieces learned before */
+function ruleReview(learned: Set<string>, n: number, prefer: Line[] = []): Step[] {
+  const out: Step[] = [];
+  for (const p of shuffle([...learned].filter((p) => RULE_OF[p]))) {
+    const q = ruleQ(p, learned, prefer);
+    if (q) out.push(q);
+    if (out.length >= n) break;
+  }
+  return out;
+}
+
 // ---------- lesson builders ----------
 export function buildLesson(lessonId: string, progress: ProgressData): Step[] {
   const lesson = lessonById(lessonId);
@@ -218,7 +254,7 @@ export function buildLesson(lessonId: string, progress: ProgressData): Step[] {
   const unit = unitById(lesson.unitId);
   if (lesson.type === "structure") return structureLesson(lessonId, progress);
   if (lesson.type === "verses") return versesLesson(unit.id);
-  return lesson.type === "final" ? finalLesson(unit.id) : learnLesson(lessonId, progress);
+  return lesson.type === "final" ? finalLesson(unit.id, progress) : learnLesson(lessonId, progress);
 }
 
 function introduce(words: string[], patterns: string[], lines: Line[], progress: ProgressData): Step[] {
@@ -228,11 +264,14 @@ function introduce(words: string[], patterns: string[], lines: Line[], progress:
     pair.forEach((w) => steps.push({ id: sid(), kind: "intro", word: w }));
     pair.forEach((w, j) => steps.push(mcq(w, j === 0 ? "ar2mean" : "mean2ar", progress)));
   }
+  const learned = learnedPats(progress, patterns);
   for (const p of patterns) {
     steps.push({ id: sid(), kind: "pattern", pattern: p });
     steps.push(...allChecks("p:" + p));
     const q = patternQ(p, lines);
     if (q) steps.push(q);
+    const r = ruleQ(p, learned, lines);
+    if (r) steps.push(r);
   }
   return steps;
 }
@@ -255,10 +294,11 @@ function learnLesson(lessonId: string, progress: ProgressData): Step[] {
   Array.from(new Set([...due, ...shuffle(older)])).slice(0, 2).forEach((w) => practice.push(mcq(w, pick(["ar2mean", "mean2ar"] as const), progress)));
   const matchWords = Array.from(new Set([...words, ...shuffle(older)])).slice(0, 5);
   if (matchWords.length >= 3) practice.push({ id: sid(), kind: "match", words: shuffle(matchWords) });
+  practice.push(...ruleReview(learnedPats(progress, lesson.patterns), 2, unit.lines));
   return [...steps, ...shuffle(practice)];
 }
 
-function finalLesson(unitId: string): Step[] {
+function finalLesson(unitId: string, progress: ProgressData): Step[] {
   const unit = unitById(unitId);
   const steps: Step[] = [];
   const lines = unit.lines.length > 6 ? shuffle(unit.lines).slice(0, 6) : unit.lines;
@@ -269,7 +309,11 @@ function finalLesson(unitId: string): Step[] {
   uw.slice(5, 7).forEach((w) => { const s = spot(w, unit.lines); if (s) steps.push(s); });
   const fl = pick(unit.lines.filter((l) => l.tokens.length >= 3));
   if (fl) { const f = fill(fl); if (f) steps.push(f); }
-  return steps;
+  // the grammar of this unit, applied to real words
+  const learned = learnedPats(progress, unit.newPatterns);
+  const mine = unit.newPatterns.map((p) => ruleQ(p, learned, unit.lines)).filter((q): q is Step => !!q);
+  steps.push(...shuffle(mine).slice(0, 3), ...ruleReview(learned, Math.max(0, 4 - mine.length)));
+  return shuffle(steps);
 }
 
 function structureLesson(lessonId: string, progress: ProgressData): Step[] {
@@ -316,6 +360,7 @@ function structureLesson(lessonId: string, progress: ProgressData): Step[] {
   }
   const matchWords = Array.from(new Set([...words, ...sentences.flatMap((l) => l.tokens.map((t) => t.key))])).filter((k) => WORDS[k]).slice(0, 5);
   if (matchWords.length >= 3) practice.push({ id: sid(), kind: "match", words: shuffle(matchWords) });
+  practice.push(...ruleReview(learnedPats(progress, lesson.patterns), 2));
   return [...steps, ...practice];
 }
 
@@ -343,9 +388,9 @@ export function buildPractice(progress: ProgressData, size = 10): Step[] {
   const steps: Step[] = [];
   for (const id of shuffle(chosen)) {
     if (id.startsWith("p:")) {
-      // review a grammar idea: its own written question or a word that uses it
-      const n = teachOf(id).checks.length;
-      const q = n && (Math.random() < 0.5 || !PATTERNS[id.slice(2)].examples.length) ? checkStep(id, Math.floor(Math.random() * n)) : patternQ(id.slice(2), poolLines);
+      // review a grammar idea: a real word that uses it, its own written question, or a meaning question
+      const p = id.slice(2), n = teachOf(id).checks.length, r = Math.random();
+      const q = (r < 0.45 && ruleQ(p, learnedPats(progress))) || (r < 0.75 && n && checkStep(id, Math.floor(Math.random() * n))) || patternQ(p, poolLines) || (n ? checkStep(id, 0) : null);
       if (q) steps.push(q);
       continue;
     }
@@ -358,5 +403,8 @@ export function buildPractice(progress: ProgressData, size = 10): Step[] {
   // practise a sentence too, once the learner has built some
   const sentences = Object.values(STRUCTURES).flatMap((s) => s.everyday).filter((l) => l.tokens.every((t) => progress.items[t.key]));
   if (sentences.length) steps.push(arrange(pick(sentences)));
+  // grammar is always part of review: at least two "grammar in action" questions
+  const ruleCount = steps.filter((s) => s.kind === "rule").length;
+  if (ruleCount < 2) steps.splice(Math.floor(steps.length / 3), 0, ...ruleReview(learnedPats(progress), 2 - ruleCount));
   return steps;
 }

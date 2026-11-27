@@ -11,7 +11,7 @@ import { DEMO_MODE } from "@/lib/supabase";
 import { useT } from "@/lib/i18n";
 import { Bar } from "./ui";
 import {
-  ArrangeEx, BreakdownEx, BuildEx, CheckEx, FillEx, IntroEx, MatchEx, McqEx, MeaningEx, PatternEx, PatternQEx, ReadEx, SpotEx, StructureEx, type Evaluate, type Pager,
+  ArrangeEx, BreakdownEx, BuildEx, CheckEx, FillEx, RuleEx, IntroEx, MatchEx, McqEx, MeaningEx, PatternEx, PatternQEx, ReadEx, SpotEx, StructureEx, type Evaluate, type Pager,
 } from "./exercises/Exercises";
 
 export interface FinishInfo { mistakes: number; graded: number; newItems: string[] }
@@ -147,6 +147,7 @@ export function LessonPlayer({ steps: initial, mode, onFinish, renderDone }: {
         {step.kind === "arrange" && <ArrangeEx step={step} {...props} />}
         {step.kind === "read" && <ReadEx step={step} {...props} />}
         {step.kind === "check" && <CheckEx step={step} {...props} />}
+        {step.kind === "rule" && <RuleEx step={step} {...props} />}
       </div>
 
       {/* footer */}
