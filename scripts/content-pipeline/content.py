@@ -294,3 +294,10 @@ w("جَدِيد|جدد", "جَدِيدٌ", "new", "নতুন", "🆕", hi_c="
 w("قَرِيب|قرب", "قَرِيبٌ", "near", "কাছে", "🤏", bn_c="করিব", hi_c="qareeb",
   tip="In the Quran: فَإِنِّي قَرِيبٌ = “then indeed I am near” (2:186).")
 w("صَلاة|صلو", "ٱلصَّلَوٰةُ", "prayer (salah)", "সালাত, নামাজ", "🛐", bn_c="সালাত", hi_c="salaat")
+
+# ---------- words for the later sentence patterns ----------
+w("X:ya", "يَا", "O … (calling someone)", "হে …", "📣", bn_c="ইয়া (ইয়া আল্লাহ)", hi_c="ya (ya Allah)",
+  tip="يَا comes before the name of the one you call: يَا أَبِي = O my father! In the Quran it is often joined: يَٰٓأَيُّهَا.")
+w("أَيْن|", "أَيۡنَ", "where?", "কোথায়?", "📍", tip="فَأَيۡنَ تَذۡهَبُونَ = So where are you going? (81:26)")
+w("هَل|", "هَلۡ", "is it…? does…? (yes/no question)", "কি? (হ্যাঁ/না প্রশ্ন)", "❓",
+  tip="هَلۡ turns a sentence into a yes/no question: هَلۡ أَتَىٰكَ = Has (the news) come to you?")

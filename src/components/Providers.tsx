@@ -1,13 +1,15 @@
 "use client";
-import { useEffect } from "react";
+import { Fragment, useEffect } from "react";
 import { AuthProvider } from "@/lib/auth";
 import { useProgress } from "@/lib/store";
 import { WordSheetProvider } from "./WordSheet";
 import { initAudioUnlock } from "@/lib/audio";
+import { loadOverrides, useContent } from "@/lib/overrides";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const lang = useProgress((s) => s.settings.lang);
   const script = useProgress((s) => s.settings.script) ?? "indopak";
+  const remount = useContent((s) => s.remount);
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
@@ -18,6 +20,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     const refill = () => useProgress.getState().refillHearts();
     refill();
     initAudioUnlock();
+    loadOverrides();
     const id = setInterval(refill, 60_000);
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
       navigator.serviceWorker.register("/sw.js").catch(() => {});
@@ -26,7 +29,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
   return (
     <AuthProvider>
-      <WordSheetProvider>{children}</WordSheetProvider>
+      {/* content edits from the superadmin: re-render with the new text when they arrive */}
+      <WordSheetProvider><Fragment key={remount}>{children}</Fragment></WordSheetProvider>
     </AuthProvider>
   );
 }

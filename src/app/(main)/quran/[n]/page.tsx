@@ -111,7 +111,7 @@ export default function SurahReader() {
             </div>
           ))}
           <p className="pt-2 text-center text-xs text-muted">
-            {lang === "bn" ? "অনুবাদ: মুহিউদ্দীন খান" : "Translation: Saheeh International"} · {lang === "bn" ? "শব্দার্থ: quran.com (ইংরেজি)" : "Word meanings: quran.com"}
+            {lang === "bn" ? "অনুবাদ: মুহিউদ্দীন খান" : "Translation: Saheeh International"} · {lang === "bn" ? "শব্দার্থ: Word-By-Word-Quran-Android (বাংলা)" : "Word meanings: quran.com"}
           </p>
         </div>
       )}

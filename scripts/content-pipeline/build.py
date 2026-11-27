@@ -131,13 +131,16 @@ CH_BN = {c['id']: c for c in json.load(open(f'{SRC}/npm/qj/package/dist/chapters
 
 # ---------------- build texts ----------------
 problems = []
+core_verses = {(sg[1], sg[2]) for t in T.TEXTS for sg in t['segs'] if sg[0] == 'q'}
 def quran_line(s, v, a, b):
     allw = sorted(w for (x, y, w) in words if (x, y) == (s, v))
     a = a or 1; b = b or allw[-1]
     bn = T.BN.get(f'{s}:{v}')
-    if bn is None: problems.append(f'no BN for {s}:{v}'); bn = []
+    if bn is None: bn = []   # falls back to the Bangla word-by-word glosses
     if len(bn) == allw[-1] and (a, b) != (1, allw[-1]): bn = bn[a - 1:b]
-    if len(bn) != b - a + 1: problems.append(f'BN length mismatch {s}:{v} {len(bn)} vs {b-a+1}')
+    if len(bn) != b - a + 1:
+        if bn and (s, v) in core_verses: problems.append(f'BN length mismatch {s}:{v} {len(bn)} vs {b-a+1}')
+        bn = []   # use the Bangla word-by-word glosses
     toks = []
     for i, w in enumerate(range(a, b + 1)):
         loc = (s, v, w)
@@ -163,6 +166,7 @@ def hand_line(group, lid):
         exact = loc is not None
         ipt = ip_manual.IP.get(unicodedata.normalize('NFC', ar)) or (ip_word(loc) if loc else None) or to_indopak(ar, standalone=not toks)
         if not ipt: problems.append('no IndoPak for hand token ' + ar)
+        elif not toks and ar.startswith('ٱ') and ipt.startswith('ال'): ipt = 'اَ' + ipt[1:]   # line start: اَللّٰهُ, اَلسَّلٰمُ
         toks.append(dict(ar=ar, en=en, bn=bn, key=key, pats=pats,
                          audio=audio_of(loc) if loc and exact else None,
                          tr=wbw_tr(loc) if loc and exact else '', loc=None, ip=ipt))
@@ -469,7 +473,8 @@ def ip_for(s):
         converted[s] = to_indopak(s, standalone=not s.startswith('ـ'))
         return converted[s]
     return None
-all_lines = [ln for t in texts_out for ln in t['lines']]
+salah_out = [dict({k: v for k, v in g.items() if k != 'segs'}, lines=[build_seg(sg) for sg in g['segs']]) for g in T.SALAH_GUIDE]
+all_lines = [ln for t in texts_out for ln in t['lines']] + [ln for g in salah_out for ln in g['lines']]
 for u in units_out:
     all_lines += u['lines'] + u['newVerses']
     for st in u['structures']:
@@ -518,7 +523,7 @@ roots_out = {r: dict(idea_en=a, idea_bn=b, story_en=c, story_bn=d) for r, (a, b,
 for w in words_out.values():
     if w['root'] and any(not f['self'] for f in w['family']) and w['root'] not in roots_out:
         problems.append('no root story for ' + w['root'])
-course = dict(totalTokens=TOTAL, ip=AR2IP, words=words_out, patterns=patterns_out, roots=roots_out, rules=teach.RULES,
+course = dict(totalTokens=TOTAL, ip=AR2IP, words=words_out, patterns=patterns_out, roots=roots_out, rules=teach.RULES, salah=salah_out,
               texts=[dict({k: v for k, v in t.items()}) for t in texts_out], units=units_out)
 
 # ---------------- coverage ----------------

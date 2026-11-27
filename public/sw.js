@@ -1,5 +1,5 @@
 /* Quranic Arabic service worker: offline app shell + cached Quran data. */
-const VERSION = "qa-v3"; // v3: surah data now carries Bangla word glosses
+const VERSION = "qa-v4"; // v4: salah guide, daily verse, content edits
 const SHELL = `${VERSION}-shell`;
 const STATIC = `${VERSION}-static`;
 const DATA = `${VERSION}-data`;

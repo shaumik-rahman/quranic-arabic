@@ -77,3 +77,9 @@ It opens full-screen like an app, works offline for lessons you've opened, and c
 - **Email sign-up**: Supabase sends a confirmation email. Its built-in mailer only allows a few emails per hour. For real use, add your own SMTP (Authentication → Emails → SMTP), or turn off "Confirm email" (Authentication → Sign In / Providers → Email).
 - **Updates**: every `git push` to `main` redeploys automatically.
 - **Editing content** (meanings, Bangla, emojis, new units): see `scripts/content-pipeline/README.md`.
+
+## Edit content (superadmin)
+Run `supabase/content_overrides.sql` once in Supabase → SQL Editor. Then Profile → Admin → **Edit content** lets the
+superadmin fix any meaning, explanation, question or translation. Edits are stored in the `content_overrides` table and
+reach every learner the next time they open the app. “Download all edits” saves them as a file, so they can also be
+merged into the source (`scripts/content-pipeline/`) later.

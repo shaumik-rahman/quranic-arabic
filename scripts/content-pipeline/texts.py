@@ -525,3 +525,206 @@ STRUCTURE_NOTES = {
    "এটি বিশেষ্যের বর্ণনাও দিতে পারে: صِرَٰطَ ٱلَّذِينَ أَنۡعَمۡتَ عَلَيۡهِمۡ = তাদের পথ, যাদের তুমি নিয়ামত দিয়েছ।"),
  ],
 }
+
+# ===========================================================================
+# Sentence patterns for Units 3–14
+# ===========================================================================
+YA = ("يَا", "O", "হে", "X:ya", [])
+ABI = ("أَبِي", "my father", "আমার বাবা", "أَب|أبو", ["i"])
+UMMI = ("أُمِّي", "my mother", "আমার মা", "أُمّ|أمم", ["i"])
+MASJID_I = ("ٱلۡمَسۡجِدِ", "the mosque", "মসজিদ", "مَسْجِد|سجد", ["al"])
+ILA = ("إِلَى", "to", "দিকে", "إِلَى|", [])
+EVERYDAY += [
+ # calling
+ E("e_yaabi", "O my father!", "হে আমার বাবা!", [YA, ABI]),
+ E("e_yaummi", "O my mother, this is a book.", "মা, এটি একটি বই।", [YA, UMMI, HADHA, ("كِتَابٌ", "a book", "একটি বই", "كِتاب|كتب", [])]),
+ E("e_rabbighfirabi", "My Lord, forgive my father.", "হে আমার রব, আমার বাবাকে ক্ষমা করো।", [
+    ("رَبِّ", "My Lord", "হে আমার রব", "رَبّ|ربب", []), ("ٱغۡفِرۡ", "forgive", "ক্ষমা করো", "غَفَرَ|غفر", ["cmd"]),
+    ("لِأَبِي", "my father", "আমার বাবাকে", "أَب|أبو", ["li", "i"])]),
+ E("e_rabbanaghfir", "Our Lord, forgive us.", "হে আমাদের রব, আমাদের ক্ষমা করো।", [
+    ("رَبَّنَا", "Our Lord", "হে আমাদের রব", "رَبّ|ربب", ["na"]), ("ٱغۡفِرۡ", "forgive", "ক্ষমা করো", "غَفَرَ|غفر", ["cmd"]),
+    ("لَنَا", "us", "আমাদের", "PRON:1P", ["li"])]),
+ # saying no
+ E("e_laalamu", "I don't know.", "আমি জানি না।", [("لَا", "not", "না", "لا|", []), ("أَعۡلَمُ", "I know", "আমি জানি", "عَلِمَ|علم", ["i_do"])]),
+ E("e_lanalamu", "We don't know.", "আমরা জানি না।", [("لَا", "not", "না", "لا|", []), ("نَعۡلَمُ", "we know", "আমরা জানি", "عَلِمَ|علم", ["we_do"])]),
+ E("e_lamadhhab", "I did not go to the mosque.", "আমি মসজিদে যাইনি।", [
+    ("لَمۡ", "did not", "নি", "لَم|", []), ("أَذۡهَبۡ", "I go", "আমি যাই", "ذَهَبَ|ذهب", ["i_do"]), ILA, MASJID_I]),
+ E("e_lamyaqra", "My father did not read the book.", "আমার বাবা বইটি পড়েননি।", [
+    ("لَمۡ", "did not", "নি", "لَم|", []), ("يَقۡرَأۡ", "reads", "পড়েন", "قَرَأَ|قرأ", ["ya"]), ABI,
+    ("ٱلۡكِتَابَ", "the book", "বইটি", "كِتاب|كتب", ["al"])]),
+ # none but / only
+ E("e_lakitab", "There is no book in the house.", "ঘরে কোনো বই নেই।", [
+    ("لَا", "no", "নেই", "لا|", []), ("كِتَابَ", "book", "কোনো বই", "كِتاب|كتب", []), ("فِي", "in", "-এ", "فِي|", []),
+    ("ٱلۡبَيۡتِ", "the house", "ঘর", "بَيْت|بيت", ["al"])]),
+ E("e_lanabudu", "We worship none but Allah.", "আমরা আল্লাহ ছাড়া কারও ইবাদত করি না।", [
+    ("لَا", "not", "না", "لا|", []), ("نَعۡبُدُ", "we worship", "আমরা ইবাদত করি", "عَبَدَ|عبد", ["we_do"]),
+    ("إِلَّا", "except", "ছাড়া", "إِلّا|", []), ("ٱللَّهَ", "Allah", "আল্লাহ", "اللَّه|أله", [])]),
+ E("e_laaqrau", "I read nothing but the Quran.", "আমি কুরআন ছাড়া কিছু পড়ি না।", [
+    ("لَا", "not", "না", "لا|", []), ("أَقۡرَأُ", "I read", "আমি পড়ি", "قَرَأَ|قرأ", ["i_do"]),
+    ("إِلَّا", "except", "ছাড়া", "إِلّا|", []), ("ٱلۡقُرۡءَانَ", "the Quran", "কুরআন", "قُرْءان|قرأ", ["al"])]),
+ # when
+ E("e_idhajaa", "When my father comes, we go to the mosque.", "বাবা এলে আমরা মসজিদে যাই।", [
+    ("إِذَا", "when", "যখন", "إِذا|", []), ("جَآءَ", "comes", "আসেন", "جاءَ|جيأ", []), ABI,
+    ("نَذۡهَبُ", "we go", "আমরা যাই", "ذَهَبَ|ذهب", ["we_do"]), ILA, MASJID_I]),
+ E("e_idhadakhalta", "When you enter the mosque, pray.", "মসজিদে প্রবেশ করলে নামাজ পড়ো।", [
+    ("إِذَا", "when", "যখন", "إِذا|", []), ("دَخَلۡتَ", "you enter", "তুমি প্রবেশ করো", "دَخَلَ|دخل", ["you_did"]),
+    ("ٱلۡمَسۡجِدَ", "the mosque", "মসজিদে", "مَسْجِد|سجد", ["al"]), ("فَصَلِّ", "then pray", "তখন নামাজ পড়ো", "صَلَّى|صلو", ["fa", "cmd"])]),
+ # place words
+ E("e_abifilbayt", "My father is in the house.", "আমার বাবা ঘরে আছেন।", [ABI, ("فِي", "(is) in", "-এ", "فِي|", []), ("ٱلۡبَيۡتِ", "the house", "ঘর", "بَيْت|بيت", ["al"])]),
+ E("e_qalamala", "The pen is on the book.", "কলমটি বইয়ের উপর।", [
+    ("ٱلۡقَلَمُ", "The pen", "কলমটি", "قَلَم|قلم", ["al"]), ("عَلَى", "(is) on", "উপর", "عَلَى|", []),
+    ("ٱلۡكِتَابِ", "the book", "বইয়ের", "كِتاب|كتب", ["al"])]),
+ E("e_dhahabaila", "My father went to the mosque.", "আমার বাবা মসজিদে গেলেন।", [("ذَهَبَ", "went", "গেলেন", "ذَهَبَ|ذهب", []), ABI, ILA, MASJID_I]),
+ E("e_khayrmin", "Good comes from Allah.", "কল্যাণ আল্লাহর পক্ষ থেকে।", [
+    ("ٱلۡخَيۡرُ", "Good", "কল্যাণ", "خَيْر|خير", ["al"]), ("مِنَ", "(is) from", "থেকে", "مِن|", []), ("ٱللَّهِ", "Allah", "আল্লাহ", "اللَّه|أله", [])]),
+ # asking (duas)
+ E("e_ighfirwalidayn", "My Lord, forgive my father and my mother.", "হে আমার রব, আমার বাবা ও মাকে ক্ষমা করো।", [
+    ("رَبِّ", "My Lord", "হে আমার রব", "رَبّ|ربب", []), ("ٱغۡفِرۡ", "forgive", "ক্ষমা করো", "غَفَرَ|غفر", ["cmd"]),
+    ("لِأَبِي", "my father", "আমার বাবাকে", "أَب|أبو", ["li", "i"]), ("وَأُمِّي", "and my mother", "ও আমার মাকে", "أُمّ|أمم", ["wa", "i"])]),
+ E("e_irhamna", "Our Lord, have mercy on us.", "হে আমাদের রব, আমাদের প্রতি দয়া করো।", [
+    ("رَبَّنَا", "Our Lord", "হে আমাদের রব", "رَبّ|ربب", ["na"]), ("ٱرۡحَمۡنَا", "have mercy on us", "আমাদের দয়া করো", "رَحِمَ|رحم", ["cmd", "na"])]),
+ E("e_ihdini", "My Lord, guide me.", "হে আমার রব, আমাকে পথ দেখাও।", [
+    ("رَبِّ", "My Lord", "হে আমার রব", "رَبّ|ربب", []), ("ٱهۡدِنِي", "guide me", "আমাকে পথ দেখাও", "هَدَى|هدي", ["cmd", "i"])]),
+ E("e_latadhhab", "Don't go!", "যেয়ো না!", [("لَا", "don't", "না", "لا|", []), ("تَذۡهَبۡ", "go", "যাও", "ذَهَبَ|ذهب", [])]),
+ # having
+ E("e_libayt", "I have a big house.", "আমার একটি বড় ঘর আছে।", [
+    ("لِي", "to me (is)", "আমার আছে", "PRON:1S", ["li"]), ("بَيۡتٌ", "a house", "একটি ঘর", "بَيْت|بيت", []), ("كَبِيرٌ", "big", "বড়", "كَبِير|كبر", [])]),
+ E("e_indiqalam", "I have a new pen.", "আমার কাছে একটি নতুন কলম আছে।", [
+    ("عِندِي", "with me (is)", "আমার কাছে আছে", "عِند|عند", ["i"]), ("قَلَمٌ", "a pen", "একটি কলম", "قَلَم|قلم", []), ("جَدِيدٌ", "new", "নতুন", "جَدِيد|جدد", [])]),
+ E("e_liabikitab", "My father has a book.", "আমার বাবার একটি বই আছে।", [
+    ("لِأَبِي", "to my father (is)", "আমার বাবার আছে", "أَب|أبو", ["li", "i"]), ("كِتَابٌ", "a book", "একটি বই", "كِتاب|كتب", [])]),
+ E("e_lanarabb", "We have a merciful Lord.", "আমাদের একজন দয়ালু রব আছেন।", [
+    ("لَنَا", "to us (is)", "আমাদের আছেন", "PRON:1P", ["li"]), ("رَبٌّ", "a Lord", "একজন রব", "رَبّ|ربب", []), ("رَحِيمٌ", "merciful", "দয়ালু", "رَحِيم|رحم", [])]),
+ # questions
+ E("e_mahadha", "What is this?", "এটি কী?", [("مَا", "What", "কী", "ما|", []), ("هَٰذَا", "(is) this", "এটি", "ذا|", [])]),
+ E("e_manhadha", "Who is this?", "এ কে?", [("مَنۡ", "Who", "কে", "مَن|", []), ("هَٰذَا", "(is) this", "এ", "ذا|", [])]),
+ E("e_aynalmasjid", "Where is the mosque?", "মসজিদ কোথায়?", [("أَيۡنَ", "Where", "কোথায়", "أَيْن|", []), ("ٱلۡمَسۡجِدُ", "(is) the mosque", "মসজিদ", "مَسْجِد|سجد", ["al"])]),
+ E("e_aynatadhhab", "Where are you going?", "তুমি কোথায় যাচ্ছ?", [("أَيۡنَ", "Where", "কোথায়", "أَيْن|", []), ("تَذۡهَبُ", "you go", "তুমি যাও", "ذَهَبَ|ذهب", [])]),
+ E("e_haldhahaba", "Did my father go to the mosque?", "বাবা কি মসজিদে গেছেন?", [
+    ("هَلۡ", "Did", "কি", "هَل|", []), ("ذَهَبَ", "go", "গেছেন", "ذَهَبَ|ذهب", []), ABI, ILA, MASJID_I]),
+]
+
+H = lambda grp, lid: ("h", grp, lid)
+STRUCTURES += [
+ S("call", "u3", "Calling: يَا …", "ডাকা: يَا …", "📣",
+   [("يَا", "O", "হে", "call"), ("أَبِي", "my father", "আমার বাবা", "thing")],
+   "To call someone, put يَا (O …) before them: يَا أَبِي = O my father! When we call Allah, يَا is usually left out: رَبِّ = (O) my Lord, رَبَّنَا = (O) our Lord.",
+   "কাউকে ডাকতে তার আগে يَا (হে …) বসান: يَا أَبِي = হে আমার বাবা! আল্লাহকে ডাকার সময় সাধারণত يَا বাদ যায়: رَبِّ = (হে) আমার রব, رَبَّنَا = (হে) আমাদের রব।",
+   [H("salah", "jalsa"), H("salah", "rabbana"), Q(2, 21, 1, 2), Q(12, 4, 5, 7), Q(2, 104, 1, 3)],
+   ["e_yaabi", "e_yaummi", "e_rabbighfirabi", "e_rabbanaghfir"], chunk=Q(2, 104, 1, 3)),
+ S("no", "u4", "Saying no: لَا and لَمۡ", "না বলা: لَا ও لَمۡ", "🙅",
+   [("لَمۡ", "did not", "নি", "no"), ("يَلِدۡ", "beget", "জন্ম দেন", "do")],
+   "لَا before a verb = does not: لَا أَعۡلَمُ = I do not know. لَمۡ before a verb = did not: لَمۡ يَلِدۡ = He did not beget. After لَمۡ the verb looks present but means past, and its last vowel becomes a sukun.",
+   "ক্রিয়ার আগে لَا = না (করে না): لَا أَعۡلَمُ = আমি জানি না। ক্রিয়ার আগে لَمۡ = করেনি: لَمۡ يَلِدۡ = তিনি জন্ম দেননি। لَمۡ-এর পরে ক্রিয়া বর্তমানের মতো দেখায় কিন্তু অর্থ অতীত, আর শেষ স্বর সুকুন হয়।",
+   [Q(112, 3), Q(109, 2), Q(96, 5)],
+   ["e_laalamu", "e_lanalamu", "e_lamadhhab", "e_lamyaqra"]),
+ S("only", "u5", "None but: لَا … إِلَّا", "ছাড়া কেউ নয়: لَا … إِلَّا", "☝️",
+   [("لَآ", "no", "নেই", "no"), ("إِلَٰهَ", "god", "ইলাহ", "thing"), ("إِلَّا", "except", "ছাড়া", "except"), ("ٱللَّهُ", "Allah", "আল্লাহ", "thing")],
+   "لَا + a noun = there is no … at all. Add إِلَّا (except) and you have the strongest way to say “only”: لَآ إِلَٰهَ إِلَّا ٱللَّهُ = no god except Allah, so Allah alone is God.",
+   "لَا + বিশেষ্য = কোনো … নেই। إِلَّا (ছাড়া) যোগ করলে “কেবল” বলার সবচেয়ে জোরালো উপায়: لَآ إِلَٰهَ إِلَّا ٱللَّهُ = আল্লাহ ছাড়া কোনো ইলাহ নেই, অর্থাৎ কেবল আল্লাহই ইলাহ।",
+   [H("azan", "az_end"), Q(2, 255, 2, 5), Q(2, 2, 3, 5)],
+   ["e_lakitab", "e_lanabudu", "e_laaqrau"], chunk=Q(2, 255, 2, 5)),
+ S("when", "u8", "When: إِذَا …", "যখন: إِذَا …", "⏰",
+   [("إِذَا", "when", "যখন", "when"), ("جَآءَ", "comes", "আসে", "do"), ("نَصۡرُ ٱللَّهِ", "the help of Allah", "আল্লাহর সাহায্য", "thing")],
+   "إِذَا + a past verb = “when … happens”. The second half says what happens then, often starting with فَـ: إِذَا جَآءَ نَصۡرُ ٱللَّهِ … فَسَبِّحۡ = When Allah's help comes … then glorify.",
+   "إِذَا + অতীত ক্রিয়া = “যখন … ঘটে”। দ্বিতীয় অংশ বলে তখন কী হয়, প্রায়ই فَـ দিয়ে শুরু: إِذَا جَآءَ نَصۡرُ ٱللَّهِ … فَسَبِّحۡ = যখন আল্লাহর সাহায্য আসে … তখন তাসবিহ পড়ো।",
+   [Q(110, 1), Q(99, 1), Q(16, 98)],
+   ["e_idhajaa", "e_idhadakhalta"]),
+ S("place", "u9", "Place words: فِي, مِنۡ, عَلَى, إِلَى", "স্থানবাচক শব্দ: فِي, مِنۡ, عَلَى, إِلَى", "📍",
+   [("مِن", "from", "থেকে", "place"), ("شَرِّ", "the evil", "অনিষ্ট", "thing")],
+   "Little words like فِي (in), مِنۡ (from), عَلَى (on) and إِلَى (to) go before a noun to say where. The noun after them ends in -i: مِن شَرِّ = from the evil, فِي ٱلۡبَيۡتِ = in the house.",
+   "فِي (-এ), مِنۡ (থেকে), عَلَى (উপর), إِلَى (দিকে) এর মতো ছোট শব্দ বিশেষ্যের আগে বসে স্থান বোঝায়। এদের পরের বিশেষ্য -ই দিয়ে শেষ হয়: مِن شَرِّ = অনিষ্ট থেকে, فِي ٱلۡبَيۡتِ = ঘরে।",
+   [Q(113, 2), Q(114, 5), Q(2, 261, 5, 7)],
+   ["e_abifilbayt", "e_qalamala", "e_dhahabaila", "e_khayrmin"]),
+ S("ask", "u12", "Asking in a dua", "দোয়ায় চাওয়া", "🤲",
+   [("رَبِّ", "My Lord", "হে আমার রব", "call"), ("زِدۡنِي", "increase me", "আমাকে বাড়িয়ে দাও", "do"), ("عِلۡمًا", "in knowledge", "জ্ঞানে", "thing")],
+   "Most duas have three parts: call Allah (رَبِّ / رَبَّنَا), ask with the command form (ٱغۡفِرۡ, ٱرۡحَمۡ, زِدۡ), and say for whom (ـنِي me, ـنَا us, لِي for me). رَبِّ زِدۡنِي عِلۡمًا = My Lord, increase me in knowledge.",
+   "বেশিরভাগ দোয়ার তিন অংশ: আল্লাহকে ডাকা (رَبِّ / رَبَّنَا), আদেশ-রূপে চাওয়া (ٱغۡفِرۡ, ٱرۡحَمۡ, زِدۡ), আর কার জন্য (ـنِي আমাকে, ـنَا আমাদের, لِي আমার জন্য)। رَبِّ زِدۡنِي عِلۡمًا = হে আমার রব, আমার জ্ঞান বাড়িয়ে দাও।",
+   [Q(20, 114, 14, 17), Q(20, 25, 2, 5), Q(20, 26), Q(71, 28, 1, 4), Q(9, 40, 19, 23)],
+   ["e_ighfirwalidayn", "e_irhamna", "e_ihdini", "e_latadhhab"]),
+ S("have", "u13", "Having: لِـ and عِندَ", "থাকা: لِـ ও عِندَ", "🎒",
+   [("لَّهُۥ", "to Him (belongs)", "তাঁরই", "owner"), ("مَا فِي ٱلسَّمَٰوَٰتِ", "what is in the heavens", "যা আকাশে আছে", "thing")],
+   "Arabic has no verb “to have”. It says “to me (is) …” with لِـ, or “with me (is) …” with عِندَ: لِي بَيۡتٌ = I have a house, عِندِي قَلَمٌ = I have a pen. لَّهُۥ مَا فِي ٱلسَّمَٰوَٰتِ = to Him belongs whatever is in the heavens.",
+   "আরবিতে “থাকা/আছে” বোঝানোর আলাদা ক্রিয়া নেই। বলা হয় “আমার জন্য (আছে) …” لِـ দিয়ে, অথবা “আমার কাছে (আছে) …” عِندَ দিয়ে: لِي بَيۡتٌ = আমার একটি ঘর আছে, عِندِي قَلَمٌ = আমার কাছে একটি কলম আছে। لَّهُۥ مَا فِي ٱلسَّمَٰوَٰتِ = আকাশে যা আছে সব তাঁরই।",
+   [Q(2, 255, 13, 19), Q(109, 6), Q(112, 4)],
+   ["e_libayt", "e_indiqalam", "e_liabikitab", "e_lanarabb"]),
+ S("question", "u14", "Asking questions: مَا, مَنۡ, أَيۡنَ, هَلۡ", "প্রশ্ন করা: مَا, مَنۡ, أَيۡنَ, هَلۡ", "❓",
+   [("مَا", "what", "কী", "ask"), ("هَٰذَا", "(is) this", "এটি", "thing")],
+   "Put the question word first, then a normal sentence: مَا (what?), مَنۡ (who?), أَيۡنَ (where?), هَلۡ (is it…? does…?). مَا هَٰذَا = What is this? مَن ذَا ٱلَّذِي يَشۡفَعُ = Who is it that intercedes?",
+   "প্রথমে প্রশ্নবোধক শব্দ, তারপর সাধারণ বাক্য: مَا (কী?), مَنۡ (কে?), أَيۡنَ (কোথায়?), هَلۡ (কি?)। مَا هَٰذَا = এটি কী? مَن ذَا ٱلَّذِي يَشۡفَعُ = কে আছে যে সুপারিশ করবে?",
+   [Q(2, 255, 20, 26), Q(81, 26), Q(101, 2), Q(88, 1)],
+   ["e_mahadha", "e_manhadha", "e_aynalmasjid", "e_aynatadhhab", "e_haldhahaba"]),
+]
+
+SEG_TR.update({
+ "2:21:1-2": ("O mankind", "হে মানুষ"),
+ "12:4:5-7": ("O my father, indeed I saw", "হে আমার পিতা, আমি দেখেছি"),
+ "2:104:1-3": ("O you who have believed", "হে মুমিনগণ"),
+ "2:2:3-5": ("no doubt in it", "এতে কোনো সন্দেহ নেই"),
+ "2:255:2-5": ("there is no god except Him", "তিনি ছাড়া কোনো ইলাহ নেই"),
+ "2:261:5-7": ("in the way of Allah", "আল্লাহর পথে"),
+ "20:25:2-5": ("My Lord, expand for me my chest", "হে আমার রব, আমার বুক প্রশস্ত করে দাও"),
+ "71:28:1-4": ("My Lord, forgive me and my parents", "হে আমার রব, আমাকে ও আমার বাবা-মাকে ক্ষমা করো"),
+ "9:40:19-23": ("Do not grieve; indeed Allah is with us.", "চিন্তা কোরো না, নিশ্চয়ই আল্লাহ আমাদের সাথে আছেন।"),
+ "2:255:13-19": ("To Him belongs whatever is in the heavens and whatever is on the earth.", "আকাশ ও পৃথিবীতে যা কিছু আছে সব তাঁরই।"),
+ "2:255:20-26": ("Who is it that can intercede with Him except by His permission?", "কে আছে যে তাঁর অনুমতি ছাড়া তাঁর কাছে সুপারিশ করবে?"),
+})
+
+# ===========================================================================
+# "Understand your salah": the prayer in order. Extra lines said in salah that no unit teaches yet.
+# ===========================================================================
+ALLAHUMMA = ("ٱللَّهُمَّ", "O Allah", "হে আল্লাহ", "اللَّهُمَّ|أله", [])
+MUHAMMAD_I = ("مُحَمَّدٍ", "Muhammad", "মুহাম্মাদ", "مُحَمَّد|حمد", [])
+WA_ALA = ("وَعَلَىٰ", "and upon", "এবং … উপর", "عَلَى|", ["wa"])
+ALA = ("عَلَىٰ", "upon", "উপর", "عَلَى|", [])
+AAL = ("ءَالِ", "the family of", "পরিবার", "آل|أول", [])
+IBRAHIM = ("إِبۡرَٰهِيمَ", "Ibrahim", "ইবরাহিম", "إِبْراهِيم|", [])
+KAMA = ("كَمَا", "as", "যেমন", "ما|", [])
+INNAKA_HAMID = [("إِنَّكَ", "indeed You", "নিশ্চয়ই তুমি", "إِنّ|", ["ka"]), ("حَمِيدٌ", "(are) Praiseworthy", "প্রশংসিত", "حَمِيد|حمد", []),
+                ("مَّجِيدٌ", "Glorious", "মহিমান্বিত", "مَجِيد|مجد", [])]
+GUIDE = [
+ L("thana", "Glory be to You, O Allah, and praise be to You. Blessed is Your name, high is Your majesty, and there is no god other than You.",
+   "হে আল্লাহ, তুমি পবিত্র, সব প্রশংসা তোমার। তোমার নাম বরকতময়, তোমার মর্যাদা সুউচ্চ, তুমি ছাড়া কোনো ইলাহ নেই।", [
+    ("سُبۡحَٰنَكَ", "Glory be to You", "তুমি পবিত্র", "سُبْحان|سبح", ["ka"]), ALLAHUMMA,
+    ("وَبِحَمۡدِكَ", "and with Your praise", "এবং তোমার প্রশংসাসহ", "حَمْد|حمد", ["wa", "bi", "ka"]),
+    ("وَتَبَارَكَ", "and blessed is", "এবং বরকতময়", "تَبارَكَ|برك", ["wa"]), ("ٱسۡمُكَ", "Your name", "তোমার নাম", "اسْم|سمو", ["ka"]),
+    ("وَتَعَٰلَىٰ", "and high is", "এবং সুউচ্চ", "تَعالَى|علو", ["wa"]), ("جَدُّكَ", "Your majesty", "তোমার মর্যাদা", "جَدّ|جدد", ["ka"]),
+    ("وَلَآ", "and (there is) no", "এবং নেই", "لا|", ["wa"]), ("إِلَٰهَ", "god", "কোনো ইলাহ", "إِلٰه|أله", []),
+    ("غَيۡرُكَ", "other than You", "তুমি ছাড়া", "غَيْر|غير", ["ka"])],
+   "One common opening dua, said quietly after the first takbir.", "প্রথম তাকবিরের পর নিচু স্বরে পড়া একটি প্রচলিত দোয়া।"),
+ L("taawwudh", "I seek refuge in Allah from Satan, the rejected.", "আমি বিতাড়িত শয়তান থেকে আল্লাহর আশ্রয় চাই।", [
+    ("أَعُوذُ", "I seek refuge", "আমি আশ্রয় চাই", "عُذْ|عوذ", ["i_do"]), ("بِٱللَّهِ", "in Allah", "আল্লাহর কাছে", "اللَّه|أله", ["bi"]),
+    ("مِنَ", "from", "থেকে", "مِن|", []), ("ٱلشَّيۡطَٰنِ", "Satan", "শয়তান", "شَيْطان|شطن", ["al"]),
+    ("ٱلرَّجِيمِ", "the rejected", "বিতাড়িত", "رَجِيم|رجم", ["al"])],
+   "Said quietly before Al-Fatiha.", "ফাতিহার আগে নিচু স্বরে।"),
+ L("salawat1", "O Allah, send prayers upon Muhammad and the family of Muhammad, as You sent prayers upon Ibrahim and the family of Ibrahim. Indeed, You are Praiseworthy, Glorious.",
+   "হে আল্লাহ, মুহাম্মাদ ও তাঁর পরিবারের উপর রহমত পাঠাও, যেমন ইবরাহিম ও তাঁর পরিবারের উপর পাঠিয়েছ। নিশ্চয়ই তুমি প্রশংসিত, মহিমান্বিত।", [
+    ALLAHUMMA, ("صَلِّ", "send prayers", "রহমত পাঠাও", "صَلَّى|صلو", ["cmd"]), ALA, MUHAMMAD_I, WA_ALA, AAL, MUHAMMAD_I, KAMA,
+    ("صَلَّيۡتَ", "You sent prayers", "তুমি পাঠিয়েছ", "صَلَّى|صلو", ["you_did"]), ALA, IBRAHIM, WA_ALA, AAL, IBRAHIM] + INNAKA_HAMID,
+   "After the tashahhud in the last sitting.", "শেষ বৈঠকে তাশাহহুদের পর।"),
+ L("salawat2", "O Allah, bless Muhammad and the family of Muhammad, as You blessed Ibrahim and the family of Ibrahim. Indeed, You are Praiseworthy, Glorious.",
+   "হে আল্লাহ, মুহাম্মাদ ও তাঁর পরিবারকে বরকত দাও, যেমন ইবরাহিম ও তাঁর পরিবারকে বরকত দিয়েছ। নিশ্চয়ই তুমি প্রশংসিত, মহিমান্বিত।", [
+    ALLAHUMMA, ("بَارِكۡ", "bless", "বরকত দাও", "بارَكَ|برك", ["cmd"]), ALA, MUHAMMAD_I, WA_ALA, AAL, MUHAMMAD_I, KAMA,
+    ("بَارَكۡتَ", "You blessed", "তুমি বরকত দিয়েছ", "بارَكَ|برك", ["you_did"]), ALA, IBRAHIM, WA_ALA, AAL, IBRAHIM] + INNAKA_HAMID),
+]
+HAND["guide"] = GUIDE
+
+def G(id, en, bn, when_en, when_bn, segs, unit=None):
+    return dict(id=id, en=en, bn=bn, when_en=when_en, when_bn=when_bn, segs=segs, unit=unit)
+
+SALAH_GUIDE = [
+ G("takbir", "Takbir: starting", "তাকবির: শুরু", "Raise your hands and begin.", "হাত তুলে নামাজ শুরু।", [H("salah", "takbir")], "u3"),
+ G("thana", "Opening dua", "সানা", "Quietly, after the first takbir.", "প্রথম তাকবিরের পর, নিচু স্বরে।", [H("guide", "thana")]),
+ G("taawwudh", "Seeking refuge & Bismillah", "আউযুবিল্লাহ ও বিসমিল্লাহ", "Before Al-Fatiha.", "ফাতিহার আগে।", [H("guide", "taawwudh"), Q(1, 1)], "u1"),
+ G("fatiha", "Al-Fatiha", "সূরা ফাতিহা", "In every rakʿah.", "প্রতি রাকাতে।", [Q(1, v) for v in range(2, 8)], "u1"),
+ G("surah", "A short surah (e.g. Al-Ikhlas)", "একটি ছোট সূরা (যেমন ইখলাস)", "After Al-Fatiha in the first two rakʿahs. Any surah you know.", "প্রথম দুই রাকাতে ফাতিহার পর। যেকোনো জানা সূরা।",
+   [Q(112, v) for v in range(1, 5)], "u4"),
+ G("ruku", "Rukūʿ: bowing", "রুকু", "Bowing, hands on knees.", "ঝুঁকে, হাঁটুতে হাত রেখে।", [H("salah", "ruku")], "u3"),
+ G("rising", "Rising from rukūʿ", "রুকু থেকে ওঠা", "Standing up again.", "আবার দাঁড়িয়ে।", [H("salah", "sami"), H("salah", "rabbana")], "u3"),
+ G("sujud", "Sujūd: prostrating", "সিজদা", "Forehead on the ground.", "কপাল মাটিতে।", [H("salah", "sujud")], "u3"),
+ G("jalsa", "Sitting between the two sujūd", "দুই সিজদার মাঝে বসা", "", "", [H("salah", "jalsa")], "u3"),
+ G("tashahhud", "Tashahhud", "তাশাহহুদ", "Sitting, after every two rakʿahs.", "প্রতি দুই রাকাত পর বসে।",
+   [H("tashahhud", x) for x in ("t1", "t2", "t3", "t4", "t5")], "u11"),
+ G("salawat", "Salawat on the Prophet ﷺ", "দরুদ", "In the last sitting.", "শেষ বৈঠকে।", [H("guide", "salawat1"), H("guide", "salawat2")]),
+ G("salam", "Salam: ending", "সালাম: শেষ", "Turning right, then left.", "ডানে, তারপর বামে ফিরে।", [H("tashahhud", "taslim")], "u11"),
+]

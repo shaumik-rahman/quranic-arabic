@@ -51,7 +51,7 @@ def convert(s, standalone=False):
     # long ī / ū carry a sukun
     s = re.sub('(' + KASRA + '|' + KASRA + SHADDA + '|' + SHADDA + KASRA + ')ی(?![ً-ْٰٓ-ٗ])', r'\1ی' + SUKUN, s)
     s = re.sub('(' + DAMMA + '|' + DAMMA + SHADDA + '|' + SHADDA + DAMMA + ')و(?![ً-ْٰٓ-ٗ])', r'\1و' + SUKUN, s)
-    s = s.replace('ا' + SUKUN, 'ا')  # silent alif of ...ُوا
+    s = re.sub('(و' + SUKUN + '?)ا' + SUKUN, r'\1ا', s)  # silent alif of ...ُوا (a hamza-alif with sukun, قَرَأۡتَ, keeps it: قَرَاْتَ)
     # bare consonants (ikhfa / idgham / word-final) get a sukun
     out, chars = [], list(s)
     for i, ch in enumerate(chars):

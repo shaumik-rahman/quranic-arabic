@@ -32,6 +32,11 @@ export default function AdminPage() {
   return (
     <div>
       <Link href="/profile" className="mb-3 inline-flex items-center gap-1 font-bold text-muted"><ArrowLeft size={18} /> Profile</Link>
+      <Link href="/admin/content" className="card mb-4 flex items-center gap-3 p-4">
+        <span className="text-3xl">✏️</span>
+        <span className="flex-1"><span className="block text-lg font-black">Edit content</span><span className="block text-sm text-muted">Fix meanings, explanations, questions and translations</span></span>
+        <span className="text-xl text-muted">›</span>
+      </Link>
       <h1 className="text-2xl font-black">Manage teachers</h1>
       <p className="mt-1 text-sm text-muted">Teachers have every lesson unlocked and unlimited hearts.</p>
       {demo ? (

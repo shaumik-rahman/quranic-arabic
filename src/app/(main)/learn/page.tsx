@@ -11,6 +11,8 @@ import { useAuth } from "@/lib/auth";
 import { currentLessonId, isLessonUnlocked, quranCoverage, textUnderstanding, unitProgress } from "@/lib/stats";
 import { useT } from "@/lib/i18n";
 import { Emoji, Ring, fmtPct } from "@/components/ui";
+import { DailyVerse } from "@/components/DailyVerse";
+import { useSalahUnderstanding } from "@/lib/salah";
 
 const COLORS = [
   { bg: "bg-emerald", dark: "var(--color-emerald-dark)", hex: "var(--color-emerald)" },
@@ -32,6 +34,7 @@ export default function LearnPage() {
   const current = currentLessonId(p);
   const currentRef = useRef<HTMLDivElement>(null);
   const [toast, setToast] = useState("");
+  const salah = useSalahUnderstanding();
 
   useEffect(() => {
     if (Object.keys(useProgress.getState().completed).length > 0) currentRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -69,6 +72,18 @@ export default function LearnPage() {
           </button>
         )}
       </section>
+
+      <DailyVerse />
+      <Link href="/salah" className="card mt-4 flex items-center gap-3 p-4" data-testid="salah-link">
+        <Ring pct={salah.pct} size={52} stroke={6} color="var(--color-emerald)">
+          <span className="text-[13px] font-black">{Math.round(salah.pct)}%</span>
+        </Ring>
+        <span className="flex-1">
+          <span className={`block text-[17px] font-black ${lang === "bn" ? "bn" : ""}`}>🕌 {lang === "bn" ? "নিজের নামাজ বুঝুন" : "Understand your salah"}</span>
+          <span className={`block text-[14px] text-muted ${lang === "bn" ? "bn" : ""}`}>{lang === "bn" ? "নামাজের প্রতিটি অংশ, ধাপে ধাপে" : "Every part of the prayer, step by step"}</span>
+        </span>
+        <span className="text-xl text-muted">›</span>
+      </Link>
 
       {/* Path */}
       <div className="mt-6 space-y-8">

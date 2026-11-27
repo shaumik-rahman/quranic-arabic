@@ -4,6 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import { PATTERNS, ROOTS, TOTAL_TOKENS, WORDS, meaning, type Token } from "@/lib/course";
 import { RootBox } from "./exercises/Exercises";
+import Link from "next/link";
+import { useAuth } from "@/lib/auth";
 import { useProgress } from "@/lib/store";
 import { strengthLevel } from "@/lib/srs";
 import { useT } from "@/lib/i18n";
@@ -44,6 +46,7 @@ function Sheet({ p, onClose }: { p: SheetPayload; onClose: () => void }) {
   const translit = useProgress((s) => s.settings.translit);
   const { A, T } = useScript();
   const w = p.key ? WORDS[p.key] : undefined;
+  const { isAdmin } = useAuth();
   useEffect(() => { setMore(false); }, [p]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -131,6 +134,9 @@ function Sheet({ p, onClose }: { p: SheetPayload; onClose: () => void }) {
               </div>
             )}
             {w && w.root && (ROOTS[w.root] || w.family.some((f) => !f.self)) && <RootBox word={p.key!} max={6} />}
+            {isAdmin && w && (
+              <Link href={`/admin/content?tab=words&q=${encodeURIComponent(w.key)}`} onClick={onClose} className="block text-center text-sm font-bold text-sky">✏️ Edit this word</Link>
+            )}
           </div>
         )}
       </div>

@@ -49,7 +49,8 @@ export interface Pattern {
   /** more examples from all over the Quran */
   across?: { count: number; words: AcrossWord[]; verses: Line[] } | null;
 }
-export interface Course { totalTokens: number; words: Record<string, Word>; patterns: Record<string, Pattern>; roots: Record<string, RootInfo>; rules: Record<string, RuleGroup>; texts: Text[]; units: Unit[] }
+export interface SalahPart { id: string; en: string; bn: string; when_en: string; when_bn: string; unit: string | null; lines: Line[] }
+export interface Course { salah: SalahPart[]; totalTokens: number; words: Record<string, Word>; patterns: Record<string, Pattern>; roots: Record<string, RootInfo>; rules: Record<string, RuleGroup>; texts: Text[]; units: Unit[] }
 
 export const course = courseJson as unknown as Course;
 export const coverage = coverageJson as unknown as {
@@ -61,6 +62,7 @@ export const coverage = coverageJson as unknown as {
 export const WORDS = course.words;
 export const PATTERNS = course.patterns;
 export const ROOTS = course.roots;
+export const SALAH = course.salah;
 export const RULES = course.rules;
 /** how a family member relates to its root (from its shape) */
 export const KIND_LABEL: Record<string, [string, string]> = {
@@ -110,7 +112,7 @@ export const ALL_LINES: Line[] = (() => {
   return out;
 })();
 export const STRUCTURES: Record<string, Structure & { unitId: string }> = {};
-UNITS.forEach((u) => (u.structures || []).forEach((s) => (STRUCTURES[s.id] = { ...s, unitId: u.id })));
+UNITS.forEach((u) => (u.structures || []).forEach((s) => (STRUCTURES[s.id] = Object.assign(s, { unitId: u.id }))));
 
 export const meaning = (w: { en: string; bn: string }, lang: Lang) => (lang === "bn" && w.bn ? w.bn : w.en);
 
